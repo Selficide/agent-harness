@@ -4,10 +4,16 @@ Usage:
   python codex_delegate.py run BRIEF [--cd DIR] [--write] [--model M] [--effort E] [--timeout S]
   python codex_delegate.py resume RUN_DIR REPLY_FILE [--timeout S]
   python codex_delegate.py label RUN_DIR --outcome useful|partial|useless [--mast CATEGORY] [--note TEXT]
+  python codex_delegate.py report
 
 Each run gets a folder under runs/codex/ holding the brief, Codex's final message (result.md, plus result.json
-when the task type has an output schema), the raw event stream, and meta.json (settings, timing, tokens).
-The script prints only a short summary and the run folder; read the files for details.
+when the task type has an output schema), the raw event stream, and meta.json (settings, timing, tokens, and
+ChatGPT plan usage before and after). The script prints only a short summary and the run folder; read the files
+for details. `report` summarizes all runs.
+
+Plan usage comes from the rate-limit snapshots Codex writes to its session logs ($CODEX_HOME/sessions). Codex
+reports it as a whole-number percentage of the plan's window, and a snapshot can lag the call it was taken in,
+so per-run deltas are coarse; totals across many runs are the reliable number.
 
 Standard library only.
 """
@@ -15,6 +21,7 @@ Standard library only.
 import argparse
 import datetime as dt
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -25,6 +32,7 @@ from pathlib import Path
 HARNESS_DIR = Path(__file__).resolve().parent
 RUNS_DIR = HARNESS_DIR / "runs" / "codex"
 SCHEMAS_DIR = HARNESS_DIR / "schemas"
+SESSIONS_DIR = Path(os.environ.get("CODEX_HOME", Path.home() / ".codex")) / "sessions"
 
 DEFAULT_MODEL = "gpt-6-luna"
 DEFAULT_EFFORT = {"review": "high", "research": "medium", "execute": "medium"}
@@ -86,6 +94,62 @@ def summarize_events(path):
     return thread_id, usage, items, errors
 
 
+def _find_key(obj, key):
+    if isinstance(obj, dict):
+        if key in obj:
+            yield obj[key]
+        for v in obj.values():
+            yield from _find_key(v, key)
+    elif isinstance(obj, list):
+        for v in obj:
+            yield from _find_key(v, key)
+
+
+def rate_limit_snapshots(rollout):
+    """Every rate-limit snapshot in a Codex session log, oldest first."""
+    snaps = []
+    if not rollout or not rollout.exists():
+        return snaps
+    for line in rollout.read_text(encoding="utf-8", errors="replace").splitlines():
+        try:
+            ev = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        snaps += [rl for rl in _find_key(ev, "rate_limits") if isinstance(rl, dict) and rl.get("primary")]
+    return snaps
+
+
+def plan_usage(snapshot):
+    if not snapshot:
+        return None
+    primary = snapshot["primary"]
+    resets = primary.get("resets_at")
+    return {
+        "plan_type": snapshot.get("plan_type"),
+        "used_percent": primary.get("used_percent"),
+        "window_minutes": primary.get("window_minutes"),
+        "resets_at": dt.datetime.fromtimestamp(resets).isoformat(timespec="seconds") if resets else None,
+    }
+
+
+def latest_plan_usage():
+    """Plan usage from the newest session log on disk, i.e. the state before the next run."""
+    if not SESSIONS_DIR.exists():
+        return None
+    for rollout in sorted(SESSIONS_DIR.rglob("rollout-*.jsonl"), key=lambda p: p.stat().st_mtime, reverse=True):
+        snaps = rate_limit_snapshots(rollout)
+        if snaps:
+            return plan_usage(snaps[-1])
+    return None
+
+
+def session_rollout(thread_id):
+    if not thread_id or not SESSIONS_DIR.exists():
+        return None
+    matches = sorted(SESSIONS_DIR.rglob(f"rollout-*{thread_id}.jsonl"))
+    return matches[-1] if matches else None
+
+
 def run_codex(cmd, stdin_text, cwd, run_dir, suffix, timeout):
     """Run one Codex turn, streaming events and stderr to files. Returns (exit_code, timed_out, seconds)."""
     events = run_dir / f"events{suffix}.jsonl"
@@ -119,10 +183,13 @@ def read_result(run_dir, suffix, has_schema):
     return text, data
 
 
-def record_turn(meta, run_dir, suffix, exit_code, timed_out, seconds, has_schema):
+def record_turn(meta, run_dir, suffix, exit_code, timed_out, seconds, has_schema, plan_before):
     thread_id, usage, items, errors = summarize_events(run_dir / f"events{suffix}.jsonl")
     _, data = read_result(run_dir, suffix, has_schema)
+    snaps = rate_limit_snapshots(session_rollout(thread_id or meta.get("thread_id")))
     turn = {
+        "plan_before": plan_before,
+        "plan_after": plan_usage(snaps[-1]) if snaps else None,
         "suffix": suffix,
         "exit_code": exit_code,
         "timed_out": timed_out,
@@ -149,6 +216,10 @@ def print_summary(run_dir, turn):
         parts.append(f"findings={turn['findings']}")
     if turn["errors"]:
         parts.append(f"errors={len(turn['errors'])}")
+    before, after = turn["plan_before"], turn["plan_after"]
+    if after:
+        start = f"{before['used_percent']}% -> " if before else ""
+        parts.append(f"plan {start}{after['used_percent']}% used")
     print(" | ".join(parts))
     print(run_dir)
 
@@ -210,8 +281,9 @@ def cmd_run(args):
         "turns": [],
         "label": None,
     }
+    plan_before = latest_plan_usage()
     exit_code, timed_out, seconds = run_codex(cmd, brief, workdir, run_dir, "", args.timeout)
-    turn = record_turn(meta, run_dir, "", exit_code, timed_out, seconds, has_schema)
+    turn = record_turn(meta, run_dir, "", exit_code, timed_out, seconds, has_schema, plan_before)
     (run_dir / "meta.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
     print_summary(run_dir, turn)
 
@@ -237,8 +309,9 @@ def cmd_resume(args):
     ]
     if has_schema:
         cmd += ["--output-schema", str(SCHEMAS_DIR / meta["schema"])]
+    plan_before = latest_plan_usage()
     exit_code, timed_out, seconds = run_codex(cmd, reply, meta["workdir"], run_dir, suffix, args.timeout)
-    turn = record_turn(meta, run_dir, suffix, exit_code, timed_out, seconds, has_schema)
+    turn = record_turn(meta, run_dir, suffix, exit_code, timed_out, seconds, has_schema, plan_before)
     (run_dir / "meta.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
     print_summary(run_dir, turn)
 
@@ -255,6 +328,36 @@ def cmd_label(args):
     }
     meta_path.write_text(json.dumps(meta, indent=2), encoding="utf-8")
     print(f"labelled {run_dir.name}: {args.outcome}")
+
+
+def cmd_report(args):
+    """One line per run, then totals: tokens, outcomes, and plan usage now."""
+    metas = []
+    for path in sorted(RUNS_DIR.glob("*/meta.json")):
+        try:
+            metas.append((path.parent.name, json.loads(path.read_text(encoding="utf-8"))))
+        except (OSError, json.JSONDecodeError):
+            continue
+    total_in = total_out = 0
+    outcomes = {}
+    for name, meta in metas:
+        turns = meta.get("turns", [])
+        tin = sum(t["usage"].get("input_tokens", 0) for t in turns)
+        tout = sum(t["usage"].get("output_tokens", 0) for t in turns)
+        total_in += tin
+        total_out += tout
+        outcome = (meta.get("label") or {}).get("outcome", "unlabelled")
+        outcomes[outcome] = outcomes.get(outcome, 0) + 1
+        before = next((t["plan_before"] for t in turns if t.get("plan_before")), None)
+        after = next((t["plan_after"] for t in reversed(turns) if t.get("plan_after")), None)
+        plan = f"{before['used_percent'] if before else '?'}%->{after['used_percent'] if after else '?'}%"
+        print(f"{name}  {meta['type']:<8} {meta['effort']:<6} {len(turns)} turn(s)  {tin + tout:>8} tok  "
+              f"plan {plan:<10} {outcome}")
+    print(f"\n{len(metas)} runs | {total_in} input + {total_out} output tokens | "
+          + ", ".join(f"{k}={v}" for k, v in sorted(outcomes.items())))
+    now = latest_plan_usage()
+    if now:
+        print(f"plan ({now['plan_type']}): {now['used_percent']}% of window used, resets {now['resets_at']}")
 
 
 def main():
@@ -284,6 +387,9 @@ def main():
                     help="failure category, if the run failed")
     lb.add_argument("--note")
     lb.set_defaults(func=cmd_label)
+
+    rp = sub.add_parser("report", help="summarize all runs: tokens, outcomes, plan usage")
+    rp.set_defaults(func=cmd_report)
 
     args = p.parse_args()
     args.func(args)

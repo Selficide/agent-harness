@@ -28,4 +28,7 @@ python codex_delegate.py label <run_dir> --outcome useful|partial|useless [--mas
   Codex's own sub-agents disabled.
 - Read `result.json` (review/research) or `result.md` (execute) in the run folder. `meta.json` has tokens and timing.
 - **Label every run** after acting on it. Labels are the eval data for comparing models, efforts, and templates.
+- `python codex_delegate.py report` lists every run with tokens, outcome, and ChatGPT plan usage, plus how much of
+  the plan's window is used now. Codex reports plan usage in whole percent and snapshots can lag, so judge cost
+  from totals across runs, not single-run deltas. Check `report` before a batch of delegations.
 - Write briefs in a scratch location or `briefs/` (gitignored is fine); the run folder keeps a copy.
