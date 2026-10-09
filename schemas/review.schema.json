@@ -1,0 +1,26 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["status", "summary", "findings", "questions", "files_read"],
+  "properties": {
+    "status": {"type": "string", "enum": ["done", "blocked"]},
+    "summary": {"type": "string", "description": "What was checked, in 1-3 sentences. If no findings, say so and name residual risks."},
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["severity", "location", "claim", "evidence", "confidence"],
+        "properties": {
+          "severity": {"type": "string", "enum": ["high", "medium", "low"]},
+          "location": {"type": "string", "description": "path:line of the problem"},
+          "claim": {"type": "string", "description": "What is wrong, in one sentence."},
+          "evidence": {"type": "string", "description": "What shows it: a path:line in the source of truth, a short quote, or a concrete failing case."},
+          "confidence": {"type": "string", "enum": ["high", "medium", "low"]}
+        }
+      }
+    },
+    "questions": {"type": "array", "items": {"type": "string"}, "description": "If blocked: the blocker and one targeted question. Otherwise open questions, or empty."},
+    "files_read": {"type": "array", "items": {"type": "string"}}
+  }
+}
