@@ -1,0 +1,24 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["status", "summary", "findings", "questions", "files_read"],
+  "properties": {
+    "status": {"type": "string", "enum": ["done", "blocked"]},
+    "summary": {"type": "string", "description": "The answer to the objective, in 1-5 sentences."},
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["claim", "evidence", "confidence"],
+        "properties": {
+          "claim": {"type": "string"},
+          "evidence": {"type": "string", "description": "path:line, a short quote, or a URL."},
+          "confidence": {"type": "string", "enum": ["high", "medium", "low"]}
+        }
+      }
+    },
+    "questions": {"type": "array", "items": {"type": "string"}, "description": "If blocked: the blocker and one targeted question. Otherwise open questions, or empty."},
+    "files_read": {"type": "array", "items": {"type": "string"}}
+  }
+}

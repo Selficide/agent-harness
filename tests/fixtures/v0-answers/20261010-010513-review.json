@@ -1,0 +1,64 @@
+{
+  "status": "done",
+  "summary": "Reviewed the five Gemini CLI raw extracts and new source pages, the new Gemini CLI and Agent Sandboxing pages, and the changed lines in Agent Harness and OpenAI Codex. Found overgeneralizations about policy behavior and an inaccurate comparison of Gemini CLI and Codex context loading; the raw extracts otherwise tracked the checked Gemini documents.",
+  "findings": [
+    {
+      "severity": "medium",
+      "location": "wiki/entities/OpenAI Codex.md:40",
+      "claim": "The inferred claim that Gemini CLI loads instruction files the same way as Codex, injecting them into every session, overstates the similarity.",
+      "evidence": "The cited Gemini source says just-in-time context files are scanned when a tool accesses a file or directory (cache/articles/2026-10-10-gemini-cli-docs/gemini-md.md:30-35). The Codex extract describes AGENTS.md files as automatically collected and placed before the user prompt (raw/articles/2026-10-09-openai-codex-prompting-guide.md:69-75).",
+      "confidence": "high"
+    },
+    {
+      "severity": "medium",
+      "location": "wiki/sources/Gemini CLI Docs - Policy Engine.md:31",
+      "claim": "The saved-approval summary omits the exception that approvals granted in plan mode apply to every mode.",
+      "evidence": "The original says approvals granted in plan mode explicitly include plan, default, autoEdit, and yolo (cache/articles/2026-10-10-gemini-cli-docs/policy-engine.md:190-192); the raw extract preserves this exception (raw/articles/2026-10-10-gemini-cli-policy-engine.md:31-32).",
+      "confidence": "high"
+    },
+    {
+      "severity": "medium",
+      "location": "wiki/concepts/Agent Sandboxing.md:31",
+      "claim": "The claim that saved approvals flow only toward more permissive modes omits the plan-mode exception.",
+      "evidence": "The original says plan-mode approvals apply to all modes, including default, autoEdit, and yolo (cache/articles/2026-10-10-gemini-cli-docs/policy-engine.md:190-197).",
+      "confidence": "high"
+    },
+    {
+      "severity": "low",
+      "location": "wiki/sources/Gemini CLI Docs - Policy Engine.md:23",
+      "claim": "The claim that a global deny removes a tool from the model's view omits the condition that the rule has no argsPattern.",
+      "evidence": "The original limits this behavior to a global deny without an argsPattern (cache/articles/2026-10-10-gemini-cli-docs/policy-engine.md:113-115); the raw extract includes that condition (raw/articles/2026-10-10-gemini-cli-policy-engine.md:15-16).",
+      "confidence": "high"
+    },
+    {
+      "severity": "low",
+      "location": "wiki/concepts/Agent Sandboxing.md:28",
+      "claim": "The claim that a globally denied tool is removed from the model's view omits the no-argsPattern condition.",
+      "evidence": "The original says tools are excluded from the model's memory only for a denial without an argsPattern (cache/articles/2026-10-10-gemini-cli-docs/policy-engine.md:113-115).",
+      "confidence": "high"
+    }
+  ],
+  "questions": [],
+  "files_read": [
+    "raw/articles/2026-10-10-gemini-cli-cheatsheet.md",
+    "raw/articles/2026-10-10-gemini-cli-context-files.md",
+    "raw/articles/2026-10-10-gemini-cli-headless-mode.md",
+    "raw/articles/2026-10-10-gemini-cli-policy-engine.md",
+    "raw/articles/2026-10-10-gemini-cli-sandboxing.md",
+    "cache/articles/2026-10-10-gemini-cli-docs/cli-reference.md",
+    "cache/articles/2026-10-10-gemini-cli-docs/gemini-md.md",
+    "cache/articles/2026-10-10-gemini-cli-docs/headless.md",
+    "cache/articles/2026-10-10-gemini-cli-docs/policy-engine.md",
+    "cache/articles/2026-10-10-gemini-cli-docs/sandbox.md",
+    "wiki/sources/Gemini CLI Docs - Cheatsheet.md",
+    "wiki/sources/Gemini CLI Docs - Context Files.md",
+    "wiki/sources/Gemini CLI Docs - Headless Mode.md",
+    "wiki/sources/Gemini CLI Docs - Policy Engine.md",
+    "wiki/sources/Gemini CLI Docs - Sandboxing.md",
+    "wiki/entities/Gemini CLI.md",
+    "wiki/concepts/Agent Sandboxing.md",
+    "wiki/concepts/Agent Harness.md",
+    "wiki/entities/OpenAI Codex.md",
+    "raw/articles/2026-10-09-openai-codex-prompting-guide.md"
+  ]
+}

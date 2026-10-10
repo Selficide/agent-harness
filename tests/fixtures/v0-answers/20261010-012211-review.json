@@ -1,0 +1,50 @@
+{
+  "status": "done",
+  "summary": "Compared the review with the planning prompt, current harness code and schemas, local Codex CLI help, and the design-principles report. I found four actionable gaps: one misstates the SDK decision, one leaves blocking-call recovery without a usable run ID, one skips the requested result delivery choice, and one treats atomic writes as sufficient for concurrent updates.",
+  "findings": [
+    {
+      "severity": "medium",
+      "location": "docs/review-contract-v1.md:16",
+      "claim": "The review incorrectly calls a hand-written MCP protocol an owner decision, although the planning prompt lists a pinned Python MCP SDK as the current leaning.",
+      "evidence": "The review repeats this characterization at docs/review-contract-v1.md:42. The source prompt says, \u201cPython MCP SDK in a pinned venv rather than a hand-written stdlib protocol layer\u201d under \u201cLeaning\u201d (docs/planning-prompt-contract-v1.md:78-82), so the review should assess that choice and its trade-offs rather than treat it as settled.",
+      "confidence": "high"
+    },
+    {
+      "severity": "medium",
+      "location": "docs/review-contract-v1.md:83",
+      "claim": "The blocking `delegate` recovery path assumes the caller has a `run_id`, but the proposal does not say how the caller learns it if the blocked call is lost before returning.",
+      "evidence": "The review says `delegate` waits for completion, then proposes `run_result(run_id)` if the call is lost (docs/review-contract-v1.md:83-88). With no ID returned before the wait, that recovery path is inaccessible unless the ID is surfaced through another mechanism.",
+      "confidence": "high"
+    },
+    {
+      "severity": "medium",
+      "location": "docs/review-contract-v1.md:94",
+      "claim": "The review does not answer whether results, including review findings, should be returned inline or as a file reference, despite that being an explicit contract-scope question.",
+      "evidence": "The prompt asks \u201cShould results return findings inline or as a file reference?\u201d (docs/planning-prompt-contract-v1.md:95-96). The review proposes request fields and storing rendered prompts (docs/review-contract-v1.md:94-104), but does not choose or compare result-delivery options.",
+      "confidence": "high"
+    },
+    {
+      "severity": "medium",
+      "location": "docs/review-contract-v1.md:78",
+      "claim": "Atomic file replacement alone does not ensure safe concurrent updates to a run store; the review leaves the required writer coordination and conflict behavior unspecified.",
+      "evidence": "The review calls for atomic writes and says the store must tolerate concurrent readers and writers (docs/review-contract-v1.md:78-81), but atomic replacement only prevents partial-file reads; two workers updating the same metadata can still overwrite each other. The proposed tests also do not explicitly exercise concurrent worker updates (docs/review-contract-v1.md:165-170).",
+      "confidence": "high"
+    }
+  ],
+  "questions": [],
+  "files_read": [
+    "docs/review-contract-v1.md",
+    "docs/planning-prompt-contract-v1.md",
+    "codex_delegate.py",
+    "schemas/review.schema.json",
+    "schemas/research.schema.json",
+    "templates/review.md",
+    "templates/research.md",
+    "templates/execute.md",
+    "CLAUDE.md",
+    "D:\\Dev\\mind-palace\\reports\\2026-10-09-multi-model-agents-plan.md",
+    "codex --help",
+    "codex exec --help",
+    "codex exec resume --help"
+  ]
+}

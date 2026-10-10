@@ -1,0 +1,37 @@
+{
+  "status": "done",
+  "summary": "Reviewed the plan against the owner\u2019s answers and planning prompt, the current Python harness, schemas, CLAUDE.md, and both Codex CLI help outputs. I found three issues: a risk fallback that conflicts with the agreed worker model, an underspecified result contract, and no explicit migration test for v0 records.",
+  "findings": [
+    {
+      "severity": "high",
+      "location": "docs/plan-contract-v1.md:182",
+      "claim": "The fallback for detached workers keeps runs attached to the MCP server, which conflicts with the plan\u2019s recovery model and the review\u2019s reason for using detached workers.",
+      "evidence": "The review says each session launches its own server and runs must be detached because they die with the session (docs/review-contract-v1.md:11-12, 45-58). The plan puts the worker outside the server (docs/plan-contract-v1.md:93-95) and promises recovery after a session restart (docs/plan-contract-v1.md:167-168, 193), but this fallback says to keep runs attached to the server (docs/plan-contract-v1.md:182-183).",
+      "confidence": "high"
+    },
+    {
+      "severity": "medium",
+      "location": "docs/plan-contract-v1.md:44",
+      "claim": "The result contract does not specify enough field types, requiredness, nullability, or allowed values to define and test the promised result schema unambiguously.",
+      "evidence": "The result table gives detailed shapes for `answer`, `state`, and `quota`, but leaves important details open: for example, whether fields such as `error` and `label` are required or nullable, allowed `label.outcome` and `label.mast` values, and types and constraints for `timing`, `warnings`, and `usage` (docs/plan-contract-v1.md:44-60). The plan says this schema is the shared contract for CLI and MCP callers (docs/plan-contract-v1.md:17-21), and the planning prompt requires request and result shapes (docs/planning-prompt-contract-v1.md:22-24).",
+      "confidence": "high"
+    },
+    {
+      "severity": "medium",
+      "location": "docs/plan-contract-v1.md:158",
+      "claim": "The v0 migration has no explicit test that verifies conversion or interpretation of existing records, including their embedded labels and per-turn usage totals.",
+      "evidence": "The plan calls for copying v0 runs and reading records without a `contract` field, then checking that report totals are correct (docs/plan-contract-v1.md:158-162), but does not specify a migration fixture or test for those mappings. Existing v0 records keep labels inside `meta.json` and accumulate usage across turns (codex_delegate.py:186-205, 333-360), while the new plan stores labels separately (docs/plan-contract-v1.md:111-116). The review requires v0 records to remain readable without rewriting old files (docs/review-contract-v1.md:189-194).",
+      "confidence": "medium"
+    }
+  ],
+  "questions": [],
+  "files_read": [
+    "docs/plan-contract-v1.md",
+    "docs/review-contract-v1.md",
+    "docs/planning-prompt-contract-v1.md",
+    "codex_delegate.py",
+    "schemas/review.schema.json",
+    "schemas/research.schema.json",
+    "CLAUDE.md"
+  ]
+}

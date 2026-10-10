@@ -74,7 +74,8 @@ fail with a clear error. Unknown fields are rejected (`additionalProperties: fal
 - `label.outcome`: `useful` \| `partial` \| `useless`; `label.mast`: `specification` \| `coordination` \|
   `verification` \| null; `label.note`: string or null; `label.labelled`: ISO 8601.
 - `state` and `error` agree: `refused` ⇔ `quota_refused`; `timed_out` ⇔ `timeout`; `failed` ⇔ any other kind;
-  `done`, `blocked`, `running` ⇔ `error: null`.
+  `done`, `blocked`, `running`, `turn_limit` ⇔ `error: null` (`turn_limit` keeps any partial answer). `quota`
+  also carries `window` (`primary` | `secondary`).
 
 **Guarantees** (written up in `CONTRACT.md`):
 - Delegates never modify files (v1). The result reports what they could actually do.

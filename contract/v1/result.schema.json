@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agent-harness/contract/v1/result.schema.json",
+  "title": "Delegate result",
+  "description": "What every operation returns for a run. All fields are always present; cross-field rules (state agrees with error) are checked by the harness.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract", "run_id", "run_dir", "state", "answer", "truncated", "provider", "model", "effort_applied",
+               "prompt_version", "capabilities", "schema_enforcement", "usage", "quota", "timing", "warnings", "error",
+               "label"],
+  "properties": {
+    "contract": {"type": "string", "const": "1"},
+    "run_id": {"type": "string", "minLength": 1},
+    "run_dir": {"type": "string", "minLength": 1},
+    "state": {"type": "string", "enum": ["running", "done", "blocked", "failed", "timed_out", "turn_limit", "refused"]},
+    "answer": {
+      "type": ["object", "null"],
+      "description": "The delegate's answer; the type-specific shape is in answer.review.json and answer.research.json.",
+      "additionalProperties": false,
+      "required": ["status", "summary", "findings", "questions", "files_read"],
+      "properties": {
+        "status": {"type": "string", "enum": ["done", "blocked"]},
+        "summary": {"type": "string"},
+        "findings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["claim", "evidence", "confidence"],
+            "properties": {
+              "severity": {"type": "string", "enum": ["high", "medium", "low"], "description": "Review only."},
+              "location": {"type": "string", "description": "Review only: path:line."},
+              "claim": {"type": "string"},
+              "evidence": {"type": "string"},
+              "confidence": {"type": "string", "enum": ["high", "medium", "low"]}
+            }
+          }
+        },
+        "questions": {"type": "array", "items": {"type": "string"}},
+        "files_read": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "truncated": {"type": "boolean", "description": "True when findings were cut to fit inline; the full answer is in run_dir."},
+    "provider": {"type": "string", "minLength": 1},
+    "model": {"type": ["string", "null"]},
+    "effort_applied": {"type": ["string", "null"]},
+    "prompt_version": {"type": "string", "minLength": 1},
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["can_read_files", "can_run_commands", "can_run_python", "network"],
+      "properties": {
+        "can_read_files": {"type": ["boolean", "null"]},
+        "can_run_commands": {"type": ["boolean", "null"]},
+        "can_run_python": {"type": ["boolean", "null"]},
+        "network": {"type": ["boolean", "null"]}
+      }
+    },
+    "schema_enforcement": {"type": "string", "enum": ["native", "validated"]},
+    "usage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["input_tokens", "cached_input_tokens", "output_tokens", "reasoning_tokens"],
+      "properties": {
+        "input_tokens": {"type": "integer", "minimum": 0},
+        "cached_input_tokens": {"type": "integer", "minimum": 0},
+        "output_tokens": {"type": "integer", "minimum": 0},
+        "reasoning_tokens": {"type": "integer", "minimum": 0}
+      }
+    },
+    "quota": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["plan_type", "window", "used_percent_before", "used_percent_after", "window_minutes", "resets_at"],
+      "properties": {
+        "plan_type": {"type": ["string", "null"]},
+        "window": {"type": "string", "enum": ["primary", "secondary"], "description": "The window closest to its limit."},
+        "used_percent_before": {"type": ["number", "null"], "minimum": 0, "maximum": 100},
+        "used_percent_after": {"type": ["number", "null"], "minimum": 0, "maximum": 100},
+        "window_minutes": {"type": ["integer", "null"], "minimum": 0},
+        "resets_at": {"type": ["string", "null"], "description": "ISO 8601 with offset."}
+      }
+    },
+    "timing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["started", "finished", "seconds"],
+      "properties": {
+        "started": {"type": "string", "description": "ISO 8601 with offset."},
+        "finished": {"type": ["string", "null"], "description": "ISO 8601 with offset; null while running."},
+        "seconds": {"type": ["number", "null"], "minimum": 0}
+      }
+    },
+    "warnings": {"type": "array", "items": {"type": "string"}},
+    "error": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["kind", "message"],
+      "properties": {
+        "kind": {"type": "string", "enum": ["invalid_request", "quota_refused", "provider_unavailable", "provider_error",
+                                            "schema_invalid", "interrupted", "timeout"]},
+        "message": {"type": "string"}
+      }
+    },
+    "label": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["outcome", "mast", "note", "labelled"],
+      "properties": {
+        "outcome": {"type": "string", "enum": ["useful", "partial", "useless"]},
+        "mast": {"type": ["string", "null"], "enum": ["specification", "coordination", "verification", null]},
+        "note": {"type": ["string", "null"]},
+        "labelled": {"type": "string", "description": "ISO 8601 with offset."}
+      }
+    }
+  }
+}

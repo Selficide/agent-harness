@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agent-harness/contract/v1/request.schema.json",
+  "title": "Delegate request",
+  "description": "A review or research task for a delegate model. Per-type rules (review needs criteria and source_of_truth) are checked by the harness.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["workdir", "type", "task", "objective", "inputs"],
+  "properties": {
+    "workdir": {"type": "string", "minLength": 1, "description": "Absolute path of the folder the delegate works in."},
+    "type": {"type": "string", "enum": ["review", "research"]},
+    "task": {"type": "string", "minLength": 1, "maxLength": 120, "description": "One line naming the task; names the run folder."},
+    "objective": {"type": "string", "minLength": 1, "description": "What a good answer achieves."},
+    "inputs": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}, "description": "Paths the delegate reads itself, relative to workdir or absolute."},
+    "criteria": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}, "description": "Review: what counts as a finding, most important first."},
+    "source_of_truth": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}, "description": "Review: paths, or a phrase like \"the code's own intended behaviour\"."},
+    "out_of_scope": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "notes": {"type": "string", "description": "Anything the other fields don't cover."},
+    "provider": {"type": "string", "enum": ["codex"], "description": "Default codex."},
+    "model": {"type": "string", "minLength": 1, "description": "Requested model; the result records what ran."},
+    "effort": {"type": "string", "enum": ["low", "medium", "high", "xhigh", "max"]},
+    "access": {"type": "string", "const": "read", "description": "Only read in v1."},
+    "request_key": {"type": "string", "minLength": 1, "maxLength": 128, "description": "Idempotency key: a repeat with the same key returns the existing run."},
+    "timeout_s": {"type": "integer", "minimum": 30, "maximum": 86400, "description": "Default 900."}
+  }
+}

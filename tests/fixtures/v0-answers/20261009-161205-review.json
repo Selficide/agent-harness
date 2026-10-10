@@ -1,0 +1,43 @@
+{
+  "status": "done",
+  "summary": "Compared the raw extract and all changed wiki passages citing the guide against the supplied full article text. I found three overstatements about Codex models being trained with, or post-trained on, a complete harness; the raw extract also notes that hidden page content was not reviewed.",
+  "findings": [
+    {
+      "severity": "medium",
+      "location": "wiki/entities/OpenAI Codex.md:19",
+      "claim": "The page says the model was trained with the recommended system prompt and the `shell` and `update_plan` tools, but the article only says it was trained to excel at the `apply_patch` diff format.",
+      "evidence": "The article says, \u201cWe strongly recommend using our exact `apply_patch` implementation as the model has been trained to excel at this diff format,\u201d then separately recommends `shell` and `update_plan` (codex_guide.md:212). It describes the prompt as optimized against internal evals, not as training data (codex_guide.md:37).",
+      "confidence": "high"
+    },
+    {
+      "severity": "medium",
+      "location": "wiki/concepts/Agent Harness.md:32",
+      "claim": "The heading generalizes from specific Codex recommendations to the claim that models are trained on a particular harness.",
+      "evidence": "The article recommends starting from its Codex-Max prompt and updating tools to improve performance (codex_guide.md:32-33), but only makes a specific training claim about `apply_patch` (codex_guide.md:212). It also cautions that models \u201cha[ve]n\u2019t necessarily been post-trained to excel\u201d at other custom tools (codex_guide.md:539).",
+      "confidence": "high"
+    },
+    {
+      "severity": "medium",
+      "location": "wiki/concepts/Agent Harness.md:51",
+      "claim": "The statement that some models are post-trained with their own harness, using OpenAI\u2019s guide as an example, attributes a training claim to the guide that it does not make.",
+      "evidence": "The guide recommends its prompt and tools when migrating a harness (codex_guide.md:30-33), but does not say Codex was post-trained with the complete codex-cli harness; its explicit training statements concern following AGENTS.md (codex_guide.md:180) and the `apply_patch` diff format (codex_guide.md:212).",
+      "confidence": "high"
+    }
+  ],
+  "questions": [
+    "The extract says 8 hidden elements totaling about 9.9k characters were not reviewed (raw/articles/2026-10-09-openai-codex-prompting-guide.md:12-13); could content in those elements affect completeness?"
+  ],
+  "files_read": [
+    "raw/articles/2026-10-09-openai-codex-prompting-guide.md",
+    "wiki/concepts/Agent Harness.md",
+    "wiki/concepts/Agent Verification.md",
+    "wiki/concepts/Context Compaction.md",
+    "wiki/concepts/Harness Engineering.md",
+    "wiki/entities/Claude Code.md",
+    "wiki/entities/OpenAI Codex.md",
+    "wiki/index.md",
+    "wiki/log.md",
+    "wiki/sources/OpenAI - Codex Prompting Guide.md",
+    "C:\\Users\\Shad\\AppData\\Local\\Temp\\claude\\D--Dev-mind-palace\\94632697-2351-4dc6-bcb3-57e5b68bcbe8\\scratchpad\\codex_guide.md"
+  ]
+}
