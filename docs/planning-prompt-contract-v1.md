@@ -79,7 +79,8 @@ day one, label failures.
 - An MCP server registered at user scope as the main interface, so the contract is self-describing in every repo
   and the delegation rules travel as server instructions. Async tools: `delegate` → run_id, `run_status`,
   `run_result`, `run_reply`, `run_label`, `runs_report`. A CLI over the same core for me and for debugging.
-- Python MCP SDK in a pinned venv rather than a hand-written stdlib protocol layer.
+- ~~Python MCP SDK in a pinned venv rather than a hand-written stdlib protocol layer.~~ **Decided 2026-10-10:** no
+  SDK; we maintain our own protocol code.
 
 ## Things I specifically want examined
 1. **MCP vs a CLI plus a user-level skill.** Is MCP actually the cleaner boundary here, or just the more fashionable
