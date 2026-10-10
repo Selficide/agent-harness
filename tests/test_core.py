@@ -17,7 +17,7 @@ REPO = Path(__file__).resolve().parent.parent
 
 def request(**overrides):
     req = {"workdir": str(REPO), "type": "review", "task": "Test review", "objective": "Find bugs.",
-           "inputs": ["codex_delegate.py"], "criteria": ["Bugs"], "source_of_truth": ["intended behaviour"],
+           "inputs": ["README.md"], "criteria": ["Bugs"], "source_of_truth": ["intended behaviour"],
            "model": "fake:done"}
     req.update(overrides)
     return req
@@ -322,7 +322,10 @@ class DetachedWorker(StoreCase):
         self.assertEqual(res["state"], "done")
         self.assertIn(res["run_id"], progress[0])
         meta = store.read_json(Path(res["run_dir"]) / "meta.json")
-        self.assertIn(meta["breakaway"], (True, None))
+        # Breakaway depends on the caller's job object (some sandboxes refuse it); a refusal must be reported.
+        self.assertIn(meta["breakaway"], (True, False, None))
+        if meta["breakaway"] is False:
+            self.assertTrue(any("job object" in w for w in res["warnings"]))
         self.assertFalse((Path(res["run_dir"]) / "lock").exists())
 
     def test_detach_returns_running_then_finishes(self):

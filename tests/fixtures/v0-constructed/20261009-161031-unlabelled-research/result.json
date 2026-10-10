@@ -1,0 +1,30 @@
+{
+  "status": "done",
+  "summary": "`codex_delegate.py` defines four subcommands: `run`, `resume`, `label`, and `report`.",
+  "findings": [
+    {
+      "claim": "`run` starts a new delegated task from a brief.",
+      "evidence": "codex_delegate.py:367 \u2014 `help=\"start a new delegated task from a brief\"`",
+      "confidence": "high"
+    },
+    {
+      "claim": "`resume` answers Codex\u2019s question and continues the same session.",
+      "evidence": "codex_delegate.py:377 \u2014 `help=\"answer Codex's question and continue the same session\"`",
+      "confidence": "high"
+    },
+    {
+      "claim": "`label` records how useful a run was.",
+      "evidence": "codex_delegate.py:383 \u2014 `help=\"record how useful a run was\"`",
+      "confidence": "high"
+    },
+    {
+      "claim": "`report` summarizes all runs, including tokens, outcomes, and plan usage.",
+      "evidence": "codex_delegate.py:391 \u2014 `help=\"summarize all runs: tokens, outcomes, plan usage\"`",
+      "confidence": "high"
+    }
+  ],
+  "questions": [],
+  "files_read": [
+    "codex_delegate.py"
+  ]
+}

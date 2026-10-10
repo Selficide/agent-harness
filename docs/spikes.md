@@ -42,3 +42,14 @@ CREATE_BREAKAWAY_FROM_JOB`, falling back to no breakaway if Windows refuses it.
 
 So workers launched this way survive the session. M2 keeps the planned design; the worker launcher uses the same
 flags and records whether breakaway was granted (if not, warn: the run may die with the session).
+
+### Re-check needed: breakaway refused after a reboot (2026-10-10, found in M3)
+After the machine rebooted (11:02) and the desktop app restarted (11:17, packaged app
+`C:\Program Files\WindowsApps\Claude_2.31226.1.0_x64__…`), processes started from this session are in a job object
+that **refuses** `CREATE_BREAKAWAY_FROM_JOB` (`WinError 5`), with or without the tool sandbox. The innermost job's
+limit flags are `0x0`: no breakaway allowed, but also no kill-on-close. The spike above ran before the reboot, when
+breakaway was allowed.
+
+What the harness does: the worker falls back to no breakaway, `meta.json` records `breakaway: false`, results carry a
+warning, and `doctor` reports `warn`. What's unknown: whether a worker still in the app's job survives (a) the session
+ending and (b) the app exiting. Re-run the M0.1 session-end test under these conditions before M4's acceptance run.

@@ -9,7 +9,7 @@ import os
 import time
 from pathlib import Path
 
-from . import adapters, quota, schema, store, worker
+from . import adapters, quota, schema, store, v0, worker
 from .adapters.base import ProviderUnavailable
 
 SEVERITY_ORDER = {"high": 0, "medium": 1, "low": 2}
@@ -154,6 +154,10 @@ def result(run_id, full=False):
     """The run's current result, with its label. A run whose worker died is marked failed (interrupted).
     Unless full, findings are trimmed to fit inline."""
     rdir = _dir(run_id)
+    meta = store.read_json(rdir / "meta.json")
+    if v0.is_v0(meta):
+        res = v0.to_result(rdir, meta)
+        return res if full else _fit_inline(res)
     res = store.read_json(rdir / "result.json")
     if res is None:
         raise HarnessError("invalid_request", f"run {run_id} has no result yet")
@@ -208,6 +212,8 @@ def reply(run_id, text, wait=True, progress=None):
     except store.Locked as e:
         raise HarnessError("invalid_request", f"run {run_id} is busy: {e}")
     try:
+        if v0.is_v0(store.read_json(rdir / "meta.json")):
+            raise HarnessError("invalid_request", f"run {run_id} is a v0 record; v0 runs can't be replied to")
         current = store.read_json(rdir / "result.json")
         if not current or current["state"] != "blocked":
             raise HarnessError("invalid_request",
@@ -264,7 +270,10 @@ def report(workdir=None, limit=20):
             "tokens": res["usage"]["input_tokens"] + res["usage"]["output_tokens"],
             "quota": f"{_pct(q.get('used_percent_before'))}->{_pct(q.get('used_percent_after'))}" if q else None,
             "outcome": outcome, "request_key": meta.get("request_key"),
-            "question": (res["answer"] or {}).get("questions") if res["state"] == "blocked" else None,
+            # Waiting for a reply: blocked, not yet labelled (labelling means it was dealt with), and replyable.
+            "question": ((res["answer"] or {}).get("questions")
+                         if res["state"] == "blocked" and res["label"] is None and res["prompt_version"] != "v0"
+                         else None),
         })
     rows.reverse()
     now = adapters.get("codex").quota_snapshot()
@@ -272,7 +281,7 @@ def report(workdir=None, limit=20):
         "runs": rows[:limit],
         "in_flight": [r["run_id"] for r in rows if r["state"] == "running"],
         "pending_questions": [{"run_id": r["run_id"], "questions": r["question"]} for r in rows
-                              if r["state"] == "blocked"],
+                              if r["question"] is not None],
         "totals": totals,
         "quota_now": {"codex": now},
         "quota_updates": quota.recent_events(),
@@ -299,8 +308,10 @@ def doctor():
     checks += adapters.get("codex").doctor()
     problems = schema.check_contract()
     checks.append(("contract files valid", not problems, "; ".join(problems) or str(schema.CONTRACT_DIR)))
-    return {"ok": all(ok for _, ok, _ in checks),
-            "checks": [{"check": c, "ok": ok, "detail": d} for c, ok, d in checks]}
+    # ok is True, False, or "warn" (works, with a weaker guarantee); only False fails the doctor.
+    status = {True: "ok", False: "fail", "warn": "warn"}
+    return {"ok": all(ok is not False for _, ok, _ in checks),
+            "checks": [{"check": c, "status": status[ok], "detail": d} for c, ok, d in checks]}
 
 
 def _breakaway_check():
@@ -314,5 +325,6 @@ def _breakaway_check():
         proc.wait(timeout=30)
         return ("workers can leave the session's job object", True, "breakaway allowed")
     except OSError as e:
-        return ("workers can leave the session's job object", False,
-                f"breakaway refused ({e}); runs may stop when the session ends")
+        return ("workers can leave the session's job object", "warn",
+                f"breakaway refused ({e}); workers stay in the app's job, so a run may stop if the job is closed "
+                "(e.g. when the app exits); results will carry a warning")

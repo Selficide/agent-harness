@@ -1,0 +1,9 @@
+{
+  "status": "blocked",
+  "summary": "I could not inspect `codex_delegate.py` or run either `codex exec` help command: PowerShell execution was rejected by the environment policy, including a read-only `Get-Location` command. No findings can be substantiated without access to the source and CLI help.",
+  "findings": [],
+  "questions": [
+    "Can you provide read access to `codex_delegate.py` and allow the `codex exec --help` and `codex exec resume --help` commands, or paste their outputs here?"
+  ],
+  "files_read": []
+}
