@@ -12,6 +12,11 @@ if len(sys.argv) > 1 and sys.argv[1] == "worker":
     args = p.parse_args()
     sys.exit(worker.main(args.run_id, args.turn))
 
+if len(sys.argv) > 1 and sys.argv[1] == "mcp":
+    from .mcp import main as mcp_main
+
+    sys.exit(mcp_main())
+
 from .cli import main  # noqa: E402
 
 sys.exit(main())

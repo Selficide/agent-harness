@@ -44,7 +44,8 @@ def delegate(request, wait=True, progress=None, provider=None):
             if current["state"] in ("running", "done", "blocked", "turn_limit"):
                 return _wait(existing, progress) if wait else result(existing.name)
 
-    adapter = adapters.get(provider or request.get("provider", "codex"))
+    # AGENT_HARNESS_TEST_PROVIDER lets protocol tests reach the fake provider through the MCP server.
+    adapter = adapters.get(provider or os.environ.get("AGENT_HARNESS_TEST_PROVIDER") or request.get("provider", "codex"))
     try:
         if adapter.name == "codex":
             adapter.exe()
