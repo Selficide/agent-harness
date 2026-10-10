@@ -16,9 +16,11 @@ later) through one stable contract, with every run recorded, labelled, and count
 ## 1. Contract v1
 Defined once as JSON Schema (draft 2020-12) in `contract/v1/`. The CLI's arguments and the MCP tool schemas are
 generated from these files. Schemas use only a small subset of JSON Schema (`type`, `properties`, `required`,
-`additionalProperties`, `items`, `enum`, `const`, `minLength`/`maxLength`, `minItems`), because we validate them
-ourselves (no third-party validator) and because Claude Code rejects or flattens some constructs (root-level
-`anyOf`/`oneOf`).
+`additionalProperties`, `items`, `enum`, `const`, `minLength`/`maxLength`, `minItems`, `minimum`/`maximum`, plus
+`description` and `$schema`/`$id`/`title` as annotations), because we validate them ourselves (no third-party
+validator) and because Claude Code rejects or flattens some constructs (root-level `anyOf`/`oneOf`). `type` may be
+an array (e.g. `["string", "null"]`): that is how nullable fields are written, since `anyOf` is out and Codex's
+strict mode needs every property listed in `required`.
 
 ### 1.1 Request (`delegate`)
 | Field | Type | Required | Notes |
@@ -91,7 +93,10 @@ fail with a clear error. Unknown fields are rejected (`additionalProperties: fal
 | doctor | `harness doctor` | `doctor` | Provider installed and logged in, sandbox usable, store writable, quota readable. |
 
 ### 1.4 Quota policy
-Per provider and per plan window (identified by its reset time):
+Per provider and per plan window (identified by its reset time). Codex reports a `primary` window and a
+`secondary` one that may be null (the free plan today: one 30-day primary window, `secondary: null`). Both are
+tracked when present; thresholds apply to each, and the higher `used_percent` decides a refusal. `quota` in the
+result reports the window closest to its limit.
 - A status update (in `warnings` and in `runs_report`) the first time usage crosses **25%, 50%, and 75%**.
 - **Refuse** new runs at **98%** or above: `state: refused`, `error.kind: quota_refused`, with the reset time.
 - Thresholds live in the harness config file and can be changed.
@@ -144,10 +149,11 @@ every run, check `runs_report` for quota before batches.
 Each ends with its tests passing and a commit. Owner approval is needed where marked.
 
 ### M0. Spikes (answer unknowns before building on them)
-1. **Detached workers on Windows.** Does a process started from a Claude Code tool call, with
-   `DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP` (and `CREATE_BREAKAWAY_FROM_JOB` if a job object is in use), survive
-   the session ending? Method: start a worker that writes a heartbeat file every few seconds, end the session, check
-   the heartbeat. Needs the owner to close a session.
+1. **Detached workers on Windows.** Does a process started with `DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP`
+   (and `CREATE_BREAKAWAY_FROM_JOB` if a job object is in use) survive the session ending? Test it from the process
+   tree real runs will have: launched by the spike-2 MCP server (itself a child of Claude Code), and also from a
+   Bash tool call for comparison. Method: start a worker that writes a heartbeat file every few seconds, end the
+   session, check the heartbeat. Needs the owner to close a session; runs after spike 2.
 2. **Minimal MCP server.** A 50-line legacy stdio server with one echo tool, registered at **local** scope in a
    scratch folder: confirm Claude Code connects after `server/discover` fails, lists the tool, honours progress
    notifications, and auto-backgrounds a 3-minute call. *(Owner approval: adds a local-scope MCP entry.)*
