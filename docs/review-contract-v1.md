@@ -200,6 +200,16 @@ Risks to design for:
 4. **Build order:** contract, core and CLI first, then the MCP layer?
 5. **Quota guard:** warn, or refuse, above some percentage of the Codex plan window? What threshold?
 
+## Owner's answers (2026-10-10)
+1. v1 is review and research only; write access is v2. **Yes.**
+2. Claude adapter: **no.** Claude can already delegate to itself in-session. The harness exists to get use out of
+   the owner's **free accounts** (Codex now, Gemini later), so quota awareness matters more than provider count.
+   Section 3 is withdrawn; the Phase 1 experiment's Claude side uses an in-session sub-agent with the same brief.
+3. Run store in a user data directory. **Yes.**
+4. Build order contract → core and CLI → MCP. **Yes.**
+5. Quota guard: **yes.** A status update each time usage crosses 25%, 50%, and 75% of the plan window, and refuse
+   new runs at 98%. Configurable.
+
 ## Codex review of this document
 Codex (gpt-6-luna, high effort, clean context; run `20261010-012211`) reviewed this document against the planning
 prompt, the code, the Codex CLI's help, and the design principles. 4 findings, each checked and folded in above:
