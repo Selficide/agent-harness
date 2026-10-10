@@ -53,3 +53,13 @@ breakaway was allowed.
 What the harness does: the worker falls back to no breakaway, `meta.json` records `breakaway: false`, results carry a
 warning, and `doctor` reports `warn`. What's unknown: whether a worker still in the app's job survives (a) the session
 ending and (b) the app exiting. Re-run the M0.1 session-end test under these conditions before M4's acceptance run.
+
+**Re-check result (2026-10-10 12:21, after the reboot): workers survive the session ending.** From a new session in
+`D:\Dev\harness-spike`, the spike MCP server (PID 26076) started a 15-minute heartbeat (PID 15952). Launched from the
+MCP server, `CREATE_BREAKAWAY_FROM_JOB` was *accepted*, yet the heartbeat reports `in_job: true`: it left the
+server's job but is still inside an outer job, presumably the packaged app's. The session was archived and the server
+exited at 12:21:53; the heartbeat kept writing (12:25:22 and later, PID alive).
+
+So session end is safe. Not tested: the desktop app exiting or the machine restarting, which likely end the outer job
+and with it any running worker. Such runs read as `failed` / `interrupted` and can be re-run with the same
+`request_key`; the server instructions already say so.
