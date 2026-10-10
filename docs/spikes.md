@@ -10,38 +10,35 @@ schema's shape. The nullable `type` arrays added to the schema subset only appea
 schemas, which the harness validates itself and never sends to Codex. If a later answer schema needs a nullable
 field, check it against Codex first.
 
-## M0.2 Minimal MCP server: **handshake passes; live checks pending**
+## M0.2 Minimal MCP server: **pass (auto-backgrounding unconfirmed)**
 `spikes/mcp_echo.py` (legacy era, own code, ~130 lines), registered at local scope for `D:\Dev\harness-spike`
 (`claude mcp add --scope local harness-spike -- python D:/Dev/agent-harness/spikes/mcp_echo.py`).
 
-Seen in `spikes/mcp_echo.log` when Claude Code 2.1.295 health-checked it:
+Handshake, seen in `spikes/mcp_echo.log` with Claude Code 2.1.295:
 1. `server/discover` with `_meta` protocol version `2026-07-28` → we answer `-32601` method not found.
 2. Claude Code falls back to `initialize` with `protocolVersion: "2025-11-25"`; we echo it back.
-3. `notifications/initialized`, then `tools/list`; the tools are listed and the status shows Connected.
+3. `notifications/initialized`, then `tools/list`; the server shows as Connected.
 
-Note: the `initialize` request carried no `jsonrpc` field (`{"method": "initialize", "params": ..., "id": 0}`), so the
-server must not require it on incoming messages.
+The `initialize` request carried no `jsonrpc` field, so the server must not require it on incoming messages.
 
-Still to check in a live session (needs the owner, see below): tool calls work, progress notifications are
-accepted, and a 3-minute call is moved to the background after 2 minutes.
+Live session (2026-10-10, session "Running repo tools", owner-driven): `echo`, `sleep` 25 s, `spawn_heartbeat`,
+`sleep` 180 s all worked. Every `tools/call` carries `_meta.progressToken` (an integer) and
+`_meta["claudecode/toolUseId"]`. Progress notifications every 10 s were accepted; the 180 s call returned normally.
 
-## M0.1 Detached workers: **partial pass; session-end check pending**
+**Unconfirmed:** whether the 180 s call was moved to the background. The transcript shows the result inline and no
+backgrounding message. Doesn't block the design (`delegate` blocks either way and progress keeps the stdio idle
+timer alive); re-check in M4's acceptance run, and if calls aren't backgrounded, recommend `--detach` plus
+`run_result` for long reviews in the server instructions.
+
+## M0.1 Detached workers: **pass**
 `spikes/heartbeat.py spawn` starts a process with `DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP | CREATE_NO_WINDOW |
 CREATE_BREAKAWAY_FROM_JOB`, falling back to no breakaway if Windows refuses it.
 
-From a Bash tool call in the desktop app: the launcher **is in a job object** (`IsProcessInJob` true), the
-breakaway flag is **allowed**, and the child is **outside** the job. That is the precondition for surviving the session
-(a job set to kill-on-close is the usual way a parent takes its children down).
+- Both the Bash tool and the session's MCP server run **inside a job object**; breakaway is **allowed** and the
+  child runs **outside** it.
+- Session-end test: the MCP server (PID 27380) spawned a 15-minute heartbeat (PID 33604) at 02:23:15. The session
+  was archived and the server exited at 02:26:36 (stdin closed). The heartbeat kept writing until 02:38:10, its full
+  15 minutes (180 entries), about 11.5 minutes after the session ended.
 
-A headless `claude -p` session can't stand in for the desktop session: the standalone CLI isn't signed in.
-
-### Owner steps (one session, about 5 minutes)
-1. Open a new Code session in `D:\Dev\harness-spike`.
-2. Ask it to run these, one at a time:
-   - `echo` with text `hi`
-   - `spawn_heartbeat` with `out_file` `D:\Dev\harness-spike\hb-mcp.jsonl` and `minutes` 15
-   - `sleep` with `seconds` 180 (check: it goes to the background after about 2 minutes and finishes)
-3. Close or archive that session (end it fully, so its MCP server exits).
-4. Come back here; Claude checks `hb-mcp.jsonl` keeps growing and `spikes/mcp_echo.log` for the progress traffic.
-
-The Bash-launched comparison can run from this session at the same time.
+So workers launched this way survive the session. M2 keeps the planned design; the worker launcher uses the same
+flags and records whether breakaway was granted (if not, warn: the run may die with the session).
