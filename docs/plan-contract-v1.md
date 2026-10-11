@@ -1,7 +1,7 @@
 # Plan: harness contract v1
 
 *Phase 2 of `docs/planning-prompt-contract-v1.md`, following `docs/review-contract-v1.md` and the owner's answers
-there. Written 2026-10-10. Status (2026-10-11): M0–M4 done, M5 next, M6 dropped; see each milestone.*
+there. Written 2026-10-10. Status (2026-10-11): M0–M5 done, M6 dropped; see each milestone.*
 
 ## Goal
 Let Claude, from any repo, hand review and research tasks to the owner's **free** model accounts (Codex; Gemini was
@@ -201,12 +201,16 @@ same `request_key` reattached to it. Not confirmed: backgrounding after 2 minute
 and stayed in the foreground. `runs_report` shows 0 tokens for a run in flight because Codex reports usage only in
 `turn.completed`. (`events.jsonl` does stream live; directory listings just show a stale size while it's open.)
 
-### M5. Vault integration and the Phase 1 experiment
+### M5. Vault integration
 - The vault rule for cross-model review on complex ingests, pointing at the `delegate` tool. *(Owner approval: vault
   schema change.)*
-- The experiment: about 20 vault review tasks, each given to Codex (through the harness) and to a Claude sub-agent
-  (in session, same rendered brief, clean context). Compare verified findings, misses, false positives, and cost.
-  Results go in a report in the harness repo.
+
+*Status: done 2026-10-11.* The rule is vault decision D-027 (`meta/Schema.md`, "Cross-model review"), approved by
+the owner. The planned Codex vs Claude sub-agent experiment was **dropped**: Codex runs on a free quota and a
+sub-agent spends Claude plan tokens, so even an equal result wouldn't change which one to use. Measurement comes from
+D-027's own runs instead: each is verified and labelled, so after about 10 of them, `report` and the labels show how
+often findings hold up, findings and quota per run, and whether the rule is worth keeping. Those runs will also
+show the 25/50/75% quota warnings in live use.
 
 ### M6. Gemini adapter: dropped (2026-10-11)
 Gemini no longer has a free tier, so it's out of scope. The contract keeps `schema_enforcement: validated` and the
