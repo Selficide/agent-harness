@@ -1,7 +1,7 @@
 # Plan: harness contract v1
 
 *Phase 2 of `docs/planning-prompt-contract-v1.md`, following `docs/review-contract-v1.md` and the owner's answers
-there. Written 2026-10-10. No code yet; this is for review.*
+there. Written 2026-10-10. Status (2026-10-11): M0–M4 done, M5 next, M6 dropped; see each milestone.*
 
 ## Goal
 Let Claude, from any repo, hand review and research tasks to the owner's **free** model accounts (Codex; Gemini was
