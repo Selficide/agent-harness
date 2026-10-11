@@ -4,14 +4,14 @@
 there. Written 2026-10-10. No code yet; this is for review.*
 
 ## Goal
-Let Claude, from any repo, hand review and research tasks to the owner's **free** model accounts (Codex now, Gemini
-later) through one stable contract, with every run recorded, labelled, and counted against the account's quota.
+Let Claude, from any repo, hand review and research tasks to the owner's **free** model accounts (Codex; Gemini was
+dropped on 2026-10-11 because it no longer has a free tier) through one stable contract, with every run recorded, labelled, and counted against the account's quota.
 
 ## Scope of v1
 - **In:** `review` and `research` tasks; read-only access; the Codex provider; a CLI and an MCP server over one core;
   quota tracking with status updates; outcome labels; reading v0 run records.
-- **Out (v2 or later):** write access (worktrees, diffs), a Gemini adapter (once the CLI is installed), a Claude
-  adapter (not planned), the modern MCP protocol era.
+- **Out (v2 or later):** write access (worktrees, diffs), a second provider (only if one with a free tier
+  appears; Gemini was dropped), a Claude adapter (not planned), the modern MCP protocol era.
 
 ## 1. Contract v1
 Defined once as JSON Schema (draft 2020-12) in `contract/v1/`. The CLI's arguments and the MCP tool schemas are
@@ -208,9 +208,9 @@ and stayed in the foreground. `runs_report` shows 0 tokens for a run in flight b
   (in session, same rendered brief, clean context). Compare verified findings, misses, false positives, and cost.
   Results go in a report in the harness repo.
 
-### M6. Gemini adapter (when the Gemini CLI is installed)
-Spike its `stats` fields and quota reporting first; then adapter, prompt rendering with `validated` schema
-enforcement, and its `doctor` checks.
+### M6. Gemini adapter: dropped (2026-10-11)
+Gemini no longer has a free tier, so it's out of scope. The contract keeps `schema_enforcement: validated` and the
+adapter interface for any future provider that can't enforce a schema natively.
 
 ## 4. Risks carried into the build
 - **Detached workers may not survive** a Claude Code session on Windows (M0.1). There's no fallback that keeps the
