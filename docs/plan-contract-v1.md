@@ -194,6 +194,12 @@ They also check the fixtures' files are byte-identical afterwards (no rewriting)
 Register at **user** scope. *(Owner approval: global Claude Code config.)*
 *Done when:* from a session in another repo (the vault), `delegate` runs a review end to end, gets backgrounded
 after 2 minutes, and `run_result` recovers a run after the session restarts.
+*Status: done 2026-10-11.* Acceptance runs `20261011-021624`, `-021726`, `-021834` (vault workdir, all labelled).
+`doctor` all ok. A run lost mid-flight (caller stopped and the MCP server process killed about 40s in) kept running;
+Claude Code restarted the server on the next call, `runs_report` listed the run in flight, and `delegate` with the
+same `request_key` reattached to it. Not confirmed: backgrounding after 2 minutes. The longest wait was about 95s
+and stayed in the foreground. Also seen: `events.jsonl` stays empty until the run ends, so `runs_report` shows 0
+tokens for a run in flight.
 
 ### M5. Vault integration and the Phase 1 experiment
 - The vault rule for cross-model review on complex ingests, pointing at the `delegate` tool. *(Owner approval: vault
