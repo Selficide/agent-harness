@@ -1,0 +1,14 @@
+{
+  "workdir": "D:/Dev/agent-harness/evals/seeded-quota/workdir",
+  "type": "review",
+  "task": "Review harness/quota.py for correctness",
+  "objective": "Find defects in harness/quota.py.",
+  "inputs": ["harness/quota.py"],
+  "source_of_truth": ["The module and function docstrings in harness/quota.py", "harness/store.py"],
+  "criteria": [
+    "Behaviour that contradicts the docstrings or the evident intent of the code",
+    "Crashes on inputs the docstrings say are valid",
+    "State persisted to disk that is wrong or lost"
+  ],
+  "out_of_scope": ["Style, naming and refactoring suggestions", "harness/store.py itself"]
+}
