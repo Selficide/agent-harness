@@ -9,7 +9,7 @@ import os
 import time
 from pathlib import Path
 
-from . import adapters, quota, schema, store, v0, worker
+from . import adapters, quota, schema, store, template, v0, worker
 from .adapters.base import ProviderUnavailable
 
 SEVERITY_ORDER = {"high": 0, "medium": 1, "low": 2}
@@ -26,7 +26,18 @@ class HarnessError(Exception):
 
 # --- delegate ----------------------------------------------------------------------------------------------------
 
-def delegate(request, wait=True, progress=None, provider=None):
+def delegate_template(name, values, workdir, overrides=None, wait=True, progress=None, provider=None):
+    """Expand a request template (harness/template.py) and delegate it; the run's meta records the template."""
+    if os.environ.get("AGENT_HARNESS_DEPTH"):
+        raise HarnessError("invalid_request", "refusing to delegate from inside a delegate (AGENT_HARNESS_DEPTH is set)")
+    try:
+        request, info = template.expand(name, values, workdir, overrides)
+    except template.TemplateError as e:
+        raise HarnessError("invalid_request", str(e))
+    return delegate(request, wait=wait, progress=progress, provider=provider, template_info=info)
+
+
+def delegate(request, wait=True, progress=None, provider=None, template_info=None):
     """Start a run for request and (by default) wait for it. provider overrides the request's (tests use "fake")."""
     if os.environ.get("AGENT_HARNESS_DEPTH"):
         raise HarnessError("invalid_request", "refusing to delegate from inside a delegate (AGENT_HARNESS_DEPTH is set)")
@@ -71,6 +82,7 @@ def delegate(request, wait=True, progress=None, provider=None):
             "effort": request.get("effort") or defaults["effort"][request["type"]],
             "timeout_s": request.get("timeout_s") or cfg["default_timeout_s"],
             "request_key": request.get("request_key"),
+            "request_template": template_info,
             "prompt_version": adapter.prompt_version,
             "schema_enforcement": adapter.schema_enforcement,
             "capabilities": adapter.capabilities(),
@@ -271,6 +283,7 @@ def report(workdir=None, limit=20):
             "tokens": res["usage"]["input_tokens"] + res["usage"]["output_tokens"],
             "quota": f"{_pct(q.get('used_percent_before'))}->{_pct(q.get('used_percent_after'))}" if q else None,
             "outcome": outcome, "request_key": meta.get("request_key"),
+            "template": _template_tag(meta.get("request_template")),
             # Waiting for a reply: blocked, not yet labelled (labelling means it was dealt with), and replyable.
             "question": ((res["answer"] or {}).get("questions")
                          if res["state"] == "blocked" and res["label"] is None and res["prompt_version"] != "v0"
@@ -287,6 +300,10 @@ def report(workdir=None, limit=20):
         "quota_now": {"codex": now},
         "quota_updates": quota.recent_events(),
     }
+
+
+def _template_tag(info):
+    return f"{info['name']}@{info['version']}" if info else None
 
 
 def _pct(v):

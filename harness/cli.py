@@ -1,6 +1,8 @@
 """Command line for the harness (contract v1). Results print as JSON; report and doctor print text unless --json.
 
   python -m harness delegate <request.json | -> [--detach]
+  python -m harness delegate --template NAME [--var NAME=VALUE ...] [--workdir DIR] [--request-key K] [--effort E]
+  python -m harness templates
   python -m harness result <run_id> [--full]
   python -m harness reply <run_id> <file> [--detach]
   python -m harness label <run_id> --outcome useful|partial|useless [--mast CATEGORY] [--note TEXT]
@@ -17,7 +19,7 @@ import json
 import sys
 from pathlib import Path
 
-from . import core, v0
+from . import core, template, v0
 
 
 def _print(data):
@@ -33,11 +35,42 @@ def _read(path):
 
 
 def cmd_delegate(args):
+    if args.template:
+        return _delegate_template(args)
+    if args.request is None or args.var or args.workdir:
+        raise core.HarnessError("invalid_request", "give a request file, or --template with --workdir and --var")
     try:
         request = json.loads(_read(args.request))
     except ValueError as e:
         raise core.HarnessError("invalid_request", f"request is not valid JSON: {e}")
     _print(core.delegate(request, wait=not args.detach, progress=_progress, provider=args.provider))
+
+
+def _delegate_template(args):
+    if args.request is not None:
+        raise core.HarnessError("invalid_request", "--template replaces the request file; give one or the other")
+    values = {}
+    for item in args.var:
+        name, sep, value = item.partition("=")
+        if not sep:
+            raise core.HarnessError("invalid_request", f"--var needs NAME=VALUE: {item!r}")
+        values.setdefault(name, []).append(value)
+    # A repeated var is a list; one given once is a string, which a list var accepts as one item.
+    values = {k: v[0] if len(v) == 1 else v for k, v in values.items()}
+    overrides = {k: v for k, v in (("request_key", args.request_key), ("effort", args.effort),
+                                   ("model", args.model), ("timeout_s", args.timeout_s)) if v is not None}
+    workdir = str(Path(args.workdir or ".").resolve())
+    _print(core.delegate_template(args.template, values, workdir, overrides, wait=not args.detach,
+                                  progress=_progress, provider=args.provider))
+
+
+def cmd_templates(args):
+    try:
+        lines = template.describe()
+    except template.TemplateError as e:
+        raise core.HarnessError("invalid_request", str(e))
+    for line in lines:
+        print(line)
 
 
 def cmd_result(args):
@@ -58,7 +91,8 @@ def cmd_report(args):
         return _print(rep)
     for r in rep["runs"]:
         print(f"{r['run_id'][:56]:<56} {r['state']:<9} {r['type']:<8} {r['effort'] or '-':<6} {r['turns']} turn(s) "
-              f"{r['tokens']:>8} tok  quota {r['quota'] or '-':<10} {r['outcome']}")
+              f"{r['tokens']:>8} tok  quota {r['quota'] or '-':<10} {r['outcome']}"
+              + (f"  [{r['template']}]" if r.get("template") else ""))
     t = rep["totals"]
     print(f"\n{t['runs']} runs | {t['input_tokens']} input + {t['output_tokens']} output tokens | "
           + ", ".join(f"{k}={v}" for k, v in sorted(t["outcomes"].items())))
@@ -97,10 +131,22 @@ def build_parser():
     sub = p.add_subparsers(dest="command", required=True)
 
     d = sub.add_parser("delegate", help="start a run from a request file and wait for its result")
-    d.add_argument("request", help="request JSON file, or - for stdin")
+    d.add_argument("request", nargs="?", help="request JSON file, or - for stdin")
     d.add_argument("--detach", action="store_true", help="return at once with state running")
     d.add_argument("--provider", help=argparse.SUPPRESS)  # tests: "fake"
+    t = d.add_argument_group("from a template (see the templates command)")
+    t.add_argument("--template", help="template name, instead of a request file")
+    t.add_argument("--var", action="append", default=[], metavar="NAME=VALUE",
+                   help="fill a template var; repeat a list var for each item")
+    t.add_argument("--workdir", help="folder the delegate works in (default: current folder)")
+    t.add_argument("--request-key")
+    t.add_argument("--effort", choices=["low", "medium", "high", "xhigh", "max"])
+    t.add_argument("--model")
+    t.add_argument("--timeout-s", type=int)
     d.set_defaults(func=cmd_delegate)
+
+    tp = sub.add_parser("templates", help="list request templates and their vars")
+    tp.set_defaults(func=cmd_templates)
 
     r = sub.add_parser("result", help="a run's current result")
     r.add_argument("run_id")

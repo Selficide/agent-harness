@@ -40,6 +40,8 @@ Every field is always present; fields that don't apply yet are `null`.
 | Operation | CLI | MCP tool |
 |---|---|---|
 | Start a run and wait for it | `python -m harness delegate <request.json>` | `delegate` |
+| Start a run from a template | `python -m harness delegate --template NAME --var K=V …` | `delegate_template` |
+| List templates and their vars | `python -m harness templates` | (in `delegate_template`'s description) |
 | Read a run's current result | `python -m harness result <run_id>` | `run_result` |
 | Answer a blocked run | `python -m harness reply <run_id> <file>` | `run_reply` |
 | Label a run | `python -m harness label <run_id> --outcome …` | `run_label` |
@@ -47,6 +49,13 @@ Every field is always present; fields that don't apply yet are `null`.
 | Check the setup | `python -m harness doctor` | `doctor` |
 
 A lost call can be recovered by `run_id`, by repeating `delegate` with the same `request_key`, or from `report`.
+
+**Templates** (`harness/templates/<name>.json`) fix a task's wording (type, objective, criteria, out_of_scope, notes,
+effort) and leave vars for the caller to fill. A template expands into an ordinary request before validation, so
+the request schema is unchanged. Callers may set only `workdir`, the vars, `request_key`, `timeout_s`, `effort`
+and `model`. Some templates capture command output first (e.g. `git diff`) into `<home>/captures/`, stored by
+content. The run's `meta.json` records `request_template` (name, version, vars) and `report` shows it. Changing a
+template's wording means bumping its `template_version`.
 
 ## Guarantees
 - Delegates never modify files in v1. `capabilities` reports what they could actually do.

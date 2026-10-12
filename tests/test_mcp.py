@@ -95,7 +95,8 @@ class Protocol(unittest.TestCase):
     def test_tools_list_schemas(self):
         self.handshake()
         tools = {t["name"]: t for t in self.s.request("tools/list")["result"]["tools"]}
-        self.assertEqual(set(tools), {"delegate", "run_result", "run_reply", "run_label", "runs_report", "doctor"})
+        self.assertEqual(set(tools), {"delegate", "delegate_template", "run_result", "run_reply", "run_label",
+                                      "runs_report", "doctor"})
         for t in tools.values():
             self.assertLessEqual(len(t["description"]), 2048)
             self.assertEqual(schema.check_schema(t["inputSchema"], mcp_names=True), [], t["name"])

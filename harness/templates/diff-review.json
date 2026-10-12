@@ -1,0 +1,34 @@
+{
+  "template": "diff-review",
+  "template_version": 1,
+  "description": "Review uncommitted changes (tracked diff plus new untracked files) for defects before commit.",
+  "vars": {
+    "base": {"type": "string", "default": "HEAD", "help": "commit to diff against"},
+    "spec": {"type": "list", "required": true, "help": "paths, or a phrase, stating what the change should do"},
+    "context": {"type": "list", "default": [], "help": "extra files the reviewer may need, e.g. callers"}
+  },
+  "captures": {
+    "diff.patch": ["git", "diff", "{base}"],
+    "untracked.txt": ["git", "ls-files", "--others", "--exclude-standard"]
+  },
+  "require_any": ["diff.patch", "untracked.txt"],
+  "request": {
+    "type": "review",
+    "task": "Review the diff against {base}",
+    "objective": "Find defects introduced by the change: the diff in diff.patch and the new files listed in untracked.txt.",
+    "inputs": ["{capture:diff.patch}", "{capture:untracked.txt}", "{context}"],
+    "source_of_truth": ["{spec}"],
+    "criteria": [
+      "Behaviour the change gets wrong relative to the source of truth",
+      "Callers or dependents of changed code that the change breaks",
+      "Crashes, data loss or state corruption on valid inputs",
+      "Requirements in the source of truth that the change does not implement"
+    ],
+    "out_of_scope": [
+      "Style, naming and refactoring suggestions",
+      "Code the change does not touch, unless the change breaks it"
+    ],
+    "notes": "diff.patch is the output of git diff run in the working folder; its paths are relative to that folder. untracked.txt lists files not yet in git, one path per line relative to the working folder; review each as wholly new. Either may be empty.",
+    "effort": "high"
+  }
+}
