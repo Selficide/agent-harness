@@ -91,7 +91,11 @@ def execute(rdir, turn):
         argv, cwd = adapter.command(run, turn)
         entry["command"] = argv
         with open(rdir / files["events"], "wb") as out, open(rdir / files["stderr"], "wb") as err:
-            proc = subprocess.Popen(argv, cwd=cwd, stdin=subprocess.PIPE, stdout=out, stderr=err, env=env)
+            # The worker has no console, so on Windows the provider (and the shells it runs) would otherwise get a
+            # visible console window of its own; closing it kills the run.
+            flags = CREATE_NO_WINDOW if os.name == "nt" else 0
+            proc = subprocess.Popen(argv, cwd=cwd, stdin=subprocess.PIPE, stdout=out, stderr=err, env=env,
+                                    creationflags=flags)
             try:
                 proc.communicate(stdin_text.encode("utf-8"), timeout=meta["timeout_s"])
             except subprocess.TimeoutExpired:
