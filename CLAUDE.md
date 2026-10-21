@@ -1,8 +1,8 @@
 # Agent Harness
 
 Tools for Claude to delegate review and research tasks to other models through contract v1 (`CONTRACT.md`). The
-provider today is Codex CLI, read-only. Design: `docs/review-contract-v1.md`, `docs/plan-contract-v1.md`; background:
-`D:\Dev\mind-palace\reports\2026-10-09-multi-model-agents-plan.md` and the vault page "OpenAI - Codex Prompting Guide".
+provider today is Codex CLI, read-only. Design: `docs/review-contract-v1.md`, `docs/plan-contract-v1.md`. Machine-
+specific notes (local paths, background reading) go in `CLAUDE.local.md`, which is gitignored.
 
 ## Rules for delegating
 - **One writer.** Delegates read, review, and research. Claude makes the edits. v1 has no write access.
@@ -30,8 +30,8 @@ python -m harness label <run_id> --outcome useful|partial|useless [--mast specif
 python -m harness report [--workdir DIR]
 python -m harness doctor
 ```
-- Run from this repo. On this machine `python` may resolve to the Microsoft Store alias; if so use
-  `C:\Users\Shad\AppData\Local\Python\pythoncore-3.14-64\python.exe`.
+- Run from this repo with Python 3.14. On Windows `python` may resolve to the Microsoft Store alias; if so use the
+  interpreter's full path (see `CLAUDE.local.md`).
 - Defaults: model `gpt-6-luna`; effort `high` for review, `medium` for research; read-only sandbox; 15-minute
   timeout; Codex's own sub-agents disabled. Change defaults in `~/.agent-harness/config.json`.
 - Runs live in `~/.agent-harness/runs/<run_id>/`: `request.json`, `prompt.md`, the event stream, `result.json`,

@@ -28,7 +28,7 @@ acceptance criteria. Keep it as small as it can be while still being right.
 ## What this repo is for
 A personal harness that lets Claude (in any of my repos) delegate work to other models' coding CLIs and record every
 run. It's just for me for now; packaging it for others may come later, so keep the design clean but don't build for
-that. The guiding principles come from `D:\Dev\mind-palace\reports\2026-10-09-multi-model-agents-plan.md`; read it.
+that. The guiding principles come from a research report in my notes vault (not in this repo); read it.
 In short: one writer (delegates read, review, and research; Claude makes the edits), a coordinator always checks
 delegated output, hand off through files, review with a clean context and a different model family, measure from
 day one, label failures.
@@ -55,8 +55,8 @@ day one, label failures.
 - Claude Code's permission classifier blocked running Codex with `--approve-for-me`. Don't design around loosening
   approvals.
 - Gemini CLI is not installed. Its docs (headless mode, cheatsheet, policy engine, sandboxing, context files) are
-  ingested in the vault; see `D:\Dev\mind-palace\wiki\entities\Gemini CLI.md` and `wiki\sources\Gemini CLI Docs - *`.
-  Codex prompting guidance is in `wiki\sources\OpenAI - Codex Prompting Guide.md`.
+  ingested in the vault (pages "Gemini CLI" and "Gemini CLI Docs - *").
+  Codex prompting guidance is in the vault page "OpenAI - Codex Prompting Guide".
 
 ## Decided (challenge these anyway)
 - The harness exports a clean, versioned contract that every repo uses. Repos never import harness code or depend on
