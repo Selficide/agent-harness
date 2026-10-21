@@ -30,8 +30,8 @@ python -m harness label <run_id> --outcome useful|partial|useless [--mast specif
 python -m harness report [--workdir DIR]
 python -m harness doctor
 ```
-- Run from this repo with Python 3.14. On Windows `python` may resolve to the Microsoft Store alias; if so use the
-  interpreter's full path (see `CLAUDE.local.md`).
+- Run from this repo with Python 3.14. On Windows `python` may resolve to the Microsoft Store alias; on macOS it's
+  `python3.14`. Use the interpreter in `CLAUDE.local.md`.
 - Defaults: model `gpt-6-luna`; effort `high` for review, `medium` for research; read-only sandbox; 15-minute
   timeout; Codex's own sub-agents disabled. Change defaults in `~/.agent-harness/config.json`.
 - Runs live in `~/.agent-harness/runs/<run_id>/`: `request.json`, `prompt.md`, the event stream, `result.json`,

@@ -163,6 +163,11 @@ def pid_alive(pid):
         finally:
             k32.CloseHandle(handle)
     try:
+        if os.waitpid(pid, os.WNOHANG)[0] == pid:  # our child and exited: reap it, or the zombie answers kill(0)
+            return False
+    except ChildProcessError:
+        pass  # not our child
+    try:
         os.kill(pid, 0)
     except ProcessLookupError:
         return False

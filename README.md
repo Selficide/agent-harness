@@ -39,7 +39,7 @@ Claude ──(MCP tool or CLI)──▶ core ──▶ store: ~/.agent-harness/r
 ## Example
 ```json
 {
-  "workdir": "D:/Dev/my-project",
+  "workdir": "/path/to/my-project",
   "type": "review",
   "task": "Review the retry logic in client.py",
   "objective": "Find defects in the retry and backoff code.",
@@ -60,14 +60,18 @@ python -m harness delegate --template diff-review --var spec=docs/retry-spec.md
 ```
 
 ## Setup
-Requires Python 3.14 (standard library only) and a logged-in `codex` CLI on PATH. Developed and tested on Windows 11;
-the process handling has POSIX branches but they are less exercised.
+Requires Python 3.14 (standard library only) and a logged-in `codex` CLI on PATH. Runs on Windows 11 and macOS; the
+test suite passes on both. On macOS, Homebrew's `python@3.14` installs as `python3.14`, so use that in place of
+`python` in the commands here.
 ```
 python -m harness doctor
 python -m unittest
 ```
-To use it from Claude Code, register `python -m harness mcp` (run from this folder) as an MCP server. `CLAUDE.md`
-holds the rules Claude follows when delegating. Runs are stored in `~/.agent-harness/runs/` (override with
+To use it from Claude Code, register the MCP server. With `PYTHONPATH` set to this folder it works from any project:
+```
+claude mcp add agent-harness --scope user -e PYTHONPATH=<this folder> -- <python 3.14> -m harness mcp
+```
+`CLAUDE.md` holds the rules Claude follows when delegating. Runs are stored in `~/.agent-harness/runs/` (override with
 `AGENT_HARNESS_HOME`), outside the repo.
 
 ## Status and evidence

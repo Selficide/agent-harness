@@ -1,7 +1,7 @@
 # Adversarial self-review, 2026-10-20
 
 Codex reviewed the harness that runs it, adversarially, against `CONTRACT.md`, the `contract/v1/` schemas and
-`CLAUDE.md`. Scope: `harness/` without `v0.py`. Findings 1 and 2 were fixed on 2026-10-21 (see "Fixed"); the
+`CLAUDE.md`. Scope: `harness/` without `v0.py`. Findings 1, 2 and 10 were fixed on 2026-10-21 (see "Fixed"); the
 rest are open.
 
 ## Method
@@ -30,7 +30,7 @@ their overlap is in line with run-to-run variation.
 | 7 | `acquire` creates the lock file, then writes its JSON. A contender that reads it as empty for 0.1 s removes it as stale and takes the lock, so two processes can both think they own the run (e.g. concurrent `run_reply`). | `harness/store.py:189-207` | control | low |
 | 8 | Provider values aren't sanity-checked and the built result isn't validated before writing: negative token counts, `used_percent` above 100 or `NaN` (`NaN` passes the 98% refusal check), and an out-of-range `resets_at` that raises during `_start_turn`, leaving a run folder with no `meta.json`. `schema.validate_result` exists but isn't called on write. | `harness/adapters/codex.py:147,199-206`, `harness/worker.py:154`, `harness/core.py:106` | split across both | low |
 | 9 | `_fit_inline` only drops findings; a result oversized for another reason (a long summary) stays oversized but is still marked `truncated`. | `harness/core.py:198-211` | both | low |
-| 10 | POSIX only: retained `Popen` objects are never reaped, so a killed worker stays a zombie and `os.kill(pid, 0)` reports it alive; the run stays `running`. Doesn't apply on this Windows machine. | `harness/worker.py:35-37`, `harness/store.py:165-171` | harness | low |
+| 10 | POSIX only: retained `Popen` objects are never reaped, so a killed worker stays a zombie and `os.kill(pid, 0)` reports it alive; the run stays `running`. | `harness/worker.py:35-37`, `harness/store.py:165-171` | harness | low, **fixed** |
 | 11 | With 10+ same-task runs in one second, `-10` sorts before `-9`, so `find_by_request_key` may not return the newest. | `harness/store.py:113-134` | harness | negligible |
 
 ## Rejected
@@ -65,3 +65,9 @@ their overlap is in line with run-to-run variation.
   name can't be addressed in a dotted path (quotes are taken literally), the run fails as `provider_unavailable`.
   `doctor` shows the configured servers. Tests: `tests/test_core.py`, `test_command_turns_off_every_mcp_server`,
   `test_mcp_listing_fails_closed`.
+
+## Fixed (2026-10-21, on macOS)
+- **10:** reproduced on macOS: a killed, unreaped child read as alive. `store.pid_alive` now reaps the pid with
+  `waitpid(WNOHANG)` when it's an exited child of the caller, and `worker.spawn` drops finished workers from
+  `_detached` so a long-lived MCP server doesn't collect zombies. Test: `tests/test_core.py`,
+  `test_exited_unreaped_child_is_dead`.

@@ -265,6 +265,13 @@ class Locking(StoreCase):
         with self.assertRaises(store.Locked):
             store.acquire(rdir, "other")
 
+    @unittest.skipIf(os.name == "nt", "zombies are POSIX only")
+    def test_exited_unreaped_child_is_dead(self):
+        proc = subprocess.Popen([sys.executable, "-c", "pass"])
+        time.sleep(0.5)  # exited but not waited on: a zombie
+        self.assertFalse(store.pid_alive(proc.pid))
+        self.assertIsNotNone(proc.poll())  # Popen copes with the child already being reaped
+
     def test_running_with_dead_worker_becomes_interrupted(self):
         res = self.run_fake("done")
         rdir = Path(res["run_dir"])

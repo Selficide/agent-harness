@@ -28,6 +28,7 @@ _detached = []  # keep Popen objects alive so Python doesn't warn about children
 def spawn(run_id, turn):
     """Start a detached worker for run_id. Returns (pid, breakaway): breakaway is False when Windows refused to let
     it leave the caller's job object (then it may die with the session), None off Windows."""
+    _detached[:] = [p for p in _detached if p.poll() is None]  # reap finished workers so zombies don't pile up
     argv = [sys.executable, "-m", "harness", "worker", run_id, "--turn", str(turn)]
     log = open(store.run_dir(run_id) / "worker.log", "ab")
     common = dict(cwd=REPO_ROOT, stdin=subprocess.DEVNULL, stdout=log, stderr=log, close_fds=True)
