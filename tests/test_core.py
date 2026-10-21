@@ -107,6 +107,29 @@ class Parser(unittest.TestCase):
         self.assertEqual(codex_adapter.harness_mcp_registered(cfg), "ah")
         self.assertIsNone(codex_adapter.harness_mcp_registered('[mcp_servers.other]\ncommand = "x"\n[x]\nharness = 1'))
 
+    def mcp_list(self, stdout, returncode=0):
+        done = subprocess.CompletedProcess([], returncode, stdout=stdout, stderr="")
+        return (mock.patch.object(codex_adapter.CodexAdapter, "exe", return_value="codex"),
+                mock.patch.object(codex_adapter.subprocess, "run", return_value=done))
+
+    def test_command_turns_off_every_mcp_server(self):
+        a = codex_adapter.CodexAdapter()
+        with tempfile.TemporaryDirectory() as d:
+            run = {"run_dir": d, "workdir": d, "type": "review", "model": "m", "effort": "high", "thread_id": "t"}
+            exe, listing = self.mcp_list(json.dumps([{"name": "docs"}, {"name": "my-db"}]))
+            with exe, listing:
+                for turn in (1, 2):
+                    argv, _ = a.command(run, turn)
+                    self.assertIn("mcp_servers.docs.enabled=false", argv)
+                    self.assertIn("mcp_servers.my-db.enabled=false", argv)
+
+    def test_mcp_listing_fails_closed(self):
+        a = codex_adapter.CodexAdapter()
+        for stdout, code in (("not json", 0), ("[]", 1), (json.dumps([{"name": "a.b"}]), 0), ("{}", 0)):
+            exe, listing = self.mcp_list(stdout, code)
+            with exe, listing, self.assertRaises(codex_adapter.ProviderUnavailable):
+                a.mcp_servers(".")
+
 
 class States(StoreCase):
     def test_done(self):

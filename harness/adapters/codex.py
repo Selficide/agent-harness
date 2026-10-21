@@ -53,6 +53,10 @@ class CodexAdapter(Adapter):
             "-o", str(rdir / files["answer"]),
             "--output-schema", str(schema_path),
         ]
+        # MCP servers run outside Codex's sandbox, so turn off every one Codex would load here (an empty
+        # `mcp_servers={}` override merges rather than replaces, so it does nothing).
+        for name in self.mcp_servers(run["workdir"]):
+            common += ["-c", f"mcp_servers.{name}.enabled=false"]
         if turn == 1:
             argv = [self.exe(), "exec", "-", "-C", run["workdir"], "-s", "read-only"] + common
         else:
@@ -61,6 +65,24 @@ class CodexAdapter(Adapter):
             # `exec resume` has no -s flag; set the sandbox through config so a reply can't widen access.
             argv = [self.exe(), "exec", "resume", run["thread_id"], "-", "-c", 'sandbox_mode="read-only"'] + common
         return argv, run["workdir"]
+
+    def mcp_servers(self, workdir):
+        """Names of the MCP servers Codex would load in workdir. Raises ProviderUnavailable if they can't be listed,
+        so a run never starts with servers left on."""
+        try:
+            out = subprocess.run([self.exe(), "mcp", "list", "--json"], cwd=workdir, capture_output=True, text=True,
+                                 timeout=30, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+            servers = json.loads(out.stdout) if out.returncode == 0 else None
+        except (OSError, subprocess.SubprocessError, ValueError):
+            servers = None
+        if not isinstance(servers, list) or not all(isinstance(s, dict) and s.get("name") for s in servers):
+            raise ProviderUnavailable("could not list Codex MCP servers to turn them off")
+        names = [s["name"] for s in servers]
+        # `-c` takes the dotted path literally (quotes become part of the name), so only plain names can be addressed.
+        bad = [n for n in names if not isinstance(n, str) or not re.fullmatch(r"[A-Za-z0-9_-]+", n)]
+        if bad:
+            raise ProviderUnavailable(f"can't turn off Codex MCP servers with these names: {bad}")
+        return names
 
     def parse(self, run_dir, turn):
         return parse_turn(Path(run_dir), turn)
@@ -102,6 +124,12 @@ class CodexAdapter(Adapter):
         registered = harness_mcp_registered(text)
         checks.append(("harness not registered as a Codex MCP server (recursion guard)", not registered,
                        f"{cfg}: {'found ' + registered if registered else 'not found'}"))
+        try:
+            servers = self.mcp_servers(Path.home())
+            checks.append(("Codex MCP servers listable (each is turned off per run)", True,
+                           ", ".join(servers) or "none configured"))
+        except ProviderUnavailable as e:
+            checks.append(("Codex MCP servers listable (each is turned off per run)", False, str(e)))
         snap = self.quota_snapshot()
         w = (snap or {}).get("windows") or []
         checks.append(("codex quota readable", bool(w),

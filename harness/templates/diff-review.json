@@ -8,8 +8,8 @@
     "context": {"type": "list", "default": [], "help": "extra files the reviewer may need, e.g. callers"}
   },
   "captures": {
-    "diff.patch": ["git", "diff", "{base}"],
-    "untracked.txt": ["git", "ls-files", "--others", "--exclude-standard"]
+    "diff.patch": ["git", "-c", "core.fsmonitor=false", "diff", "--no-ext-diff", "--no-textconv", "{base}"],
+    "untracked.txt": ["git", "-c", "core.fsmonitor=false", "ls-files", "--others", "--exclude-standard"]
   },
   "require_any": ["diff.patch", "untracked.txt"],
   "request": {

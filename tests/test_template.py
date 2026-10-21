@@ -72,6 +72,19 @@ class Expand(GitRepoCase):
         self.assertEqual(info, {"name": "diff-review", "version": 1,
                                 "vars": {"base": "HEAD", "spec": ["docs/plan.md"], "context": []}})
 
+    def test_capture_ignores_external_diff_and_textconv(self):
+        # Either would run a program outside the sandbox, and change what diff.patch contains.
+        git(self.repo, "config", "diff.external", "echo EXTERNAL")
+        git(self.repo, "config", "diff.up.textconv", "echo TEXTCONV")
+        (self.repo / ".git" / "info" / "attributes").write_text("*.py diff=up\n")
+        self.change()
+        with mock.patch.dict(os.environ, {"GIT_EXTERNAL_DIFF": "echo EXTERNAL"}):
+            req, _ = template.expand("diff-review", {"spec": "s"}, str(self.repo))
+        text = Path(req["inputs"][0]).read_text(encoding="utf-8")
+        self.assertIn("+x = 2", text)
+        self.assertNotIn("EXTERNAL", text)
+        self.assertNotIn("TEXTCONV", text)
+
     def test_list_var_splices(self):
         self.change()
         req, _ = template.expand("diff-review", {"spec": ["s1", "s2"], "context": ["c1", "c2"]}, str(self.repo))
