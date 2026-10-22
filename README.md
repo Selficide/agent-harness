@@ -75,6 +75,9 @@ claude mcp add agent-harness --scope user -e PYTHONPATH=<this folder> -- <python
 `AGENT_HARNESS_HOME`), outside the repo.
 
 ## Status and evidence
+- In daily use as the cross-model reviewer for [wiki-engine](https://github.com/Selficide/wiki-engine) vaults: as of
+  2026-10-22, 60 recorded runs, 47 labelled useful, 4 partial and 9 useless (most of the useless ones are test runs
+  and infrastructure failures, not bad reviews). 94 unit tests.
 - Contract v1 is done (milestones in `docs/plan-contract-v1.md`). Design review: `docs/review-contract-v1.md`.
 - `evals/seeded-quota/`: a copy of `harness/quota.py` with 4 planted bugs. A clean run found 4 of 4 with no false
   positives.
