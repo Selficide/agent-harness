@@ -9,7 +9,7 @@ import os
 import time
 from pathlib import Path
 
-from . import adapters, quota, schema, store, template, v0, worker
+from . import adapters, paths, quota, schema, store, template, v0, worker
 from .adapters.base import ProviderUnavailable
 
 SEVERITY_ORDER = {"high": 0, "medium": 1, "low": 2}
@@ -55,6 +55,10 @@ def delegate(request, wait=True, progress=None, provider=None, template_info=Non
             if current["state"] in ("running", "done", "blocked", "turn_limit"):
                 return _wait(existing, progress) if wait else result(existing.name)
 
+    request, patterns, problems = paths.resolve(request)
+    if problems:
+        raise HarnessError("invalid_request", "; ".join(problems))
+
     # AGENT_HARNESS_TEST_PROVIDER lets protocol tests reach the fake provider through the MCP server.
     adapter = adapters.get(provider or os.environ.get("AGENT_HARNESS_TEST_PROVIDER") or request.get("provider", "codex"))
     try:
@@ -83,6 +87,7 @@ def delegate(request, wait=True, progress=None, provider=None, template_info=Non
             "timeout_s": request.get("timeout_s") or cfg["default_timeout_s"],
             "request_key": request.get("request_key"),
             "request_template": template_info,
+            "patterns": patterns or None,
             "prompt_version": adapter.prompt_version,
             "schema_enforcement": adapter.schema_enforcement,
             "capabilities": adapter.capabilities(),

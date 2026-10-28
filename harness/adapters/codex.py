@@ -157,10 +157,10 @@ USAGE_KEYS = {"input_tokens": "input_tokens", "cached_input_tokens": "cached_inp
 
 
 def parse_turn(run_dir, turn):
-    """Thread id, usage, final answer text, and errors from one turn's files."""
+    """Thread id, usage, final answer text, errors, and the shell commands run, from one turn's files."""
     files = run_files(turn)
     out = {"thread_id": None, "usage": {v: 0 for v in USAGE_KEYS.values()}, "answer_text": None, "errors": [],
-           "commands_blocked": 0}
+           "commands_blocked": 0, "commands": []}
     events = run_dir / files["events"]
     if events.exists():
         for line in events.read_text(encoding="utf-8", errors="replace").splitlines():
@@ -175,6 +175,9 @@ def parse_turn(run_dir, turn):
                 for k, v in (ev.get("usage") or {}).items():
                     if k in USAGE_KEYS and isinstance(v, int):
                         out["usage"][USAGE_KEYS[k]] += v
+            elif kind == "item.completed" and (ev.get("item") or {}).get("type") == "command_execution":
+                if isinstance(ev["item"].get("command"), str):
+                    out["commands"].append(ev["item"]["command"])
             elif kind in ("error", "turn.failed"):
                 err = ev.get("message") or ev.get("error") or ev
                 if isinstance(err, dict) and isinstance(err.get("message"), str):

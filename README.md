@@ -32,6 +32,8 @@ Claude ──(MCP tool or CLI)──▶ core ──▶ store: ~/.agent-harness/r
 - `harness/adapters/`: `codex.py` builds the `codex exec` command, parses its event stream and reads plan usage.
   `fake.py` is a scripted provider for tests.
 - `harness/quota.py`: warns the first time a plan window crosses 25%, 50% and 75%, and refuses new runs at 98%.
+- `harness/paths.py`: checks that the files a request names exist, expands wildcard patterns, and after the run
+  warns about named files the delegate never opened (coverage).
 - `harness/template.py`, `harness/templates/`: request templates. `diff-review` reviews uncommitted changes.
 - `harness/mcp.py`: a stdio MCP server (`python -m harness mcp`), one tool per operation.
 - `contract/v1/`: JSON Schemas for requests, results and answers. `CONTRACT.md` explains them.

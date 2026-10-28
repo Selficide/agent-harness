@@ -6,13 +6,14 @@ result.json. It only starts work once the launcher has handed it the run's lock.
 
 import json
 import os
+import re
 import subprocess
 import sys
 import time
 import traceback
 from pathlib import Path
 
-from . import adapters, quota, schema, store
+from . import adapters, paths, quota, schema, store
 from .adapters.base import ProviderUnavailable, run_files
 
 DETACHED_PROCESS = 0x00000008
@@ -149,6 +150,10 @@ def execute(rdir, turn):
         state, error = answer["status"], None
         if not answer["files_read"]:
             warnings.append("files_read is empty: the delegate may not have read anything; check its evidence")
+        commands = [c for t in range(1, turn + 1) for c in adapter.parse(rdir, t).get("commands", [])]
+        coverage = paths.coverage(request, commands, answer["files_read"])
+        entry["coverage"] = {"unreached": coverage[0], "total": coverage[1]}
+        warnings += [w for w in (paths.coverage_warning(*coverage), garbled_warning(answer)) if w]
     entry["state"] = state
     entry["warnings"] = warnings
     store.write_json(rdir / "meta.json", meta)
@@ -188,6 +193,24 @@ def build_result(rdir, meta, state, answer, error):
         "error": error,
         "label": None,
     }
+
+
+# UTF-8 read as cp1252 or similar (Â², Ã©, â€”, â…”), or replacement characters.
+GARBLED = re.compile("�|[ÂÃ][\u0080-¿]|â[\u0080-¿ -⃿]")
+ENCODING_WORDS = re.compile(r"mojibake|replacement char|mis-?encoded|encoding (error|issue|problem)"
+                            r"|(garbled|corrupt(ed)?) (character|unit|symbol|glyph|text|byte)", re.IGNORECASE)
+
+
+def garbled_warning(answer):
+    """A warning naming the findings that quote garbled text or claim an encoding fault: delegates that read UTF-8
+    as another encoding report valid characters as corrupted."""
+    hits = [str(i) for i, f in enumerate(answer["findings"], 1)
+            if GARBLED.search(f.get("claim", "") + f.get("evidence", ""))
+            or ENCODING_WORDS.search(f.get("claim", ""))]
+    if not hits:
+        return None
+    return (f"findings {', '.join(hits)} quote garbled text or claim an encoding fault; the delegate may have misread "
+            "non-ASCII characters, so check the file as UTF-8 before acting")
 
 
 def _tail(path, chars=500):

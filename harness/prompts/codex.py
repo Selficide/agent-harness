@@ -4,7 +4,19 @@ use the word "review" for reviews, no requests for plans or progress updates.
 Bump PROMPT_VERSION whenever the wording changes, so runs stay comparable (results record it).
 """
 
-PROMPT_VERSION = "codex-1"
+import os
+
+PROMPT_VERSION = "codex-2"
+
+# codex-2: on Windows, Windows PowerShell 5.1 shows UTF-8 files garbled (Get-Content reads them as the ANSI code
+# page, and its console output re-encodes even with -Encoding UTF8), which made reviewers report valid characters
+# such as ² and ± as corrupted. rg's output reaches Codex intact. The example pattern is "^", not "": Windows
+# PowerShell drops empty arguments to native programs.
+WINDOWS_ENCODING = ("Files are UTF-8. If your shell is Windows PowerShell, its Get-Content and console output garble "
+                    "non-ASCII characters (², ±, é, —), even with -Encoding UTF8. Read files with rg, e.g. "
+                    "`rg -n \"^\" <path>`, or start the command with "
+                    "`[Console]::OutputEncoding=[Text.Encoding]::UTF8;` and use `Get-Content -Encoding UTF8`. "
+                    "Don't report a character as corrupted unless rg shows it corrupted too.")
 
 
 def _bullets(items):
@@ -37,6 +49,8 @@ def render(request):
     else:
         parts.append("Do not modify files. Back every finding with a `path:line`, short quote, or URL, and mark "
                      "your confidence.")
+    if os.name == "nt":
+        parts.append(WINDOWS_ENCODING)
     parts.append("List every file you read in files_read. If you cannot continue without an answer from the "
                  "requester, set status to blocked and ask one targeted question.")
     return "\n".join(parts) + "\n"

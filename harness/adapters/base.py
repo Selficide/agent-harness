@@ -28,7 +28,8 @@ class Adapter:
         raise NotImplementedError
 
     def parse(self, run_dir, turn):
-        """Read turn N's output files: {thread_id, usage, answer_text, errors}."""
+        """Read turn N's output files: {thread_id, usage, answer_text, errors, commands} (commands: the shell
+        commands the provider ran, as text, for the coverage check)."""
         raise NotImplementedError
 
     def quota_snapshot(self, thread_id=None):

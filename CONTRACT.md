@@ -15,7 +15,14 @@ Reviews also require `criteria` (what counts as a finding, most important first)
 phrase like "the code's own intended behaviour").
 Optional: `out_of_scope`, `notes`, `provider` (`codex`), `model`, `effort` (`low`…`max`), `access` (`read` only),
 `request_key` (idempotency), `timeout_s` (default 900).
-Unknown fields are rejected. Point to files; don't paste them. Review requests carry no author context: no
+Unknown fields are rejected. Point to files; don't paste them.
+
+**Paths are checked before the run starts** (`harness/paths.py`). An item in `inputs` or `source_of_truth` that looks
+like a path (absolute; or with a separator and no spaces in its first segment; or one word with an extension) must
+exist, optionally followed by a note in parentheses (`meta/Engine.md (the Layers section)`); otherwise the request is
+`invalid_request`. Anything else is a phrase and is left alone. A wildcard pattern (`raw/2026-10-21-*.md`) is
+replaced by the files it matches, sorted, in the stored request, and `meta.json` records `patterns` with each
+match count. A pattern that matches nothing, or more than 200 files, is refused. Review requests carry no author context: no
 reasoning or explanation of why the work is right.
 
 ## Result (`result.schema.json`)
@@ -33,7 +40,12 @@ Every field is always present; fields that don't apply yet are `null`.
 - `provider`, `model`, `effort_applied`, `prompt_version`, `capabilities`, `schema_enforcement`: what actually ran
   and what the delegate could do.
 - `usage` (tokens), `quota` (plan usage before and after, for the window closest to its limit), `timing`.
-- `warnings`: things to know, e.g. `files_read is empty`, `quota crossed 50%`.
+- `warnings`: things to know, e.g. `files_read is empty`, `quota crossed 50%`. Two are about the answer itself:
+  - `coverage: N of M files …`: files named in `inputs` and `source_of_truth` that appear in none of the delegate's
+    shell commands and not in its `files_read`, so it may not have read them. The turn's entry in `meta.json` has
+    the full list under `coverage`.
+  - `findings … quote garbled text or claim an encoding fault`: the delegate may have read UTF-8 as another
+    encoding. Check those findings against the file before acting.
 - `label`: `{outcome, mast, note, labelled}` once the run is labelled.
 
 ## Operations

@@ -15,6 +15,7 @@ before a run existed (the error prints as JSON).
 """
 
 import argparse
+import io
 import json
 import sys
 from pathlib import Path
@@ -184,6 +185,11 @@ def build_parser():
 
 
 def main(argv=None):
+    # Results quote files verbatim; on Windows a piped stdout defaults to the ANSI code page, which can't encode
+    # characters like ⅔ and made printing a result crash.
+    for stream in (sys.stdout, sys.stderr):
+        if isinstance(stream, io.TextIOWrapper) and stream.encoding.lower().replace("-", "") != "utf8":
+            stream.reconfigure(encoding="utf-8")
     args = build_parser().parse_args(argv)
     try:
         return args.func(args) or 0
