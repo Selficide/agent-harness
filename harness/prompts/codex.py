@@ -23,7 +23,7 @@ def _bullets(items):
     return "\n".join(f"- {x}" for x in items)
 
 
-def render(request):
+def render(request, encoding_note=os.name == "nt"):
     r = request
     parts = [f"# Task: {r['task']}", ""]
     if r["type"] == "review":
@@ -49,7 +49,7 @@ def render(request):
     else:
         parts.append("Do not modify files. Back every finding with a `path:line`, short quote, or URL, and mark "
                      "your confidence.")
-    if os.name == "nt":
+    if encoding_note:
         parts.append(WINDOWS_ENCODING)
     parts.append("List every file you read in files_read. If you cannot continue without an answer from the "
                  "requester, set status to blocked and ask one targeted question.")

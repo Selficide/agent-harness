@@ -4,7 +4,9 @@ For callers of the agent harness (Claude, from any repo). The machine-readable d
 this page says what it means. Background: `docs/plan-contract-v1.md`.
 
 ## What it does
-Hands a **review** or **research** task to another model (Codex now), waits for it, and returns a typed result.
+Hands a **review** or **research** task to another model, waits for it, and returns a typed result. Providers:
+`codex` (the default; reviews and research) and `claude` (Claude Code, `claude-haiku-5-5` by default; research only,
+since a Claude reviewer of Claude's work isn't an independent check).
 Every run is recorded in `~/.agent-harness/runs/<run_id>/` (override with `AGENT_HARNESS_HOME`) and counted against
 the provider account's quota.
 
@@ -13,7 +15,7 @@ Required: `workdir` (absolute path), `type` (`review` | `research`), `task` (one
 `objective`, `inputs` (paths, at least one; the delegate reads them itself).
 Reviews also require `criteria` (what counts as a finding, most important first) and `source_of_truth` (paths, or a
 phrase like "the code's own intended behaviour").
-Optional: `out_of_scope`, `notes`, `provider` (`codex`), `model`, `effort` (`low`…`max`), `access` (`read` only),
+Optional: `out_of_scope`, `notes`, `provider` (`codex` | `claude`), `model`, `effort` (`low`…`max`), `access` (`read` only),
 `request_key` (idempotency), `timeout_s` (default 900).
 Unknown fields are rejected. Point to files; don't paste them.
 
@@ -40,6 +42,8 @@ Every field is always present; fields that don't apply yet are `null`.
 - `provider`, `model`, `effort_applied`, `prompt_version`, `capabilities`, `schema_enforcement`: what actually ran
   and what the delegate could do.
 - `usage` (tokens), `quota` (plan usage before and after, for the window closest to its limit), `timing`.
+  Claude reports no plan usage, so its `quota` is null; each run is capped at `claude_max_budget_usd` in
+  `config.json` (default $1), and the turn's entry in `meta.json` records `cost_usd`.
 - `warnings`: things to know, e.g. `files_read is empty`, `quota crossed 50%`. Two are about the answer itself:
   - `coverage: N of M files …`: files named in `inputs` and `source_of_truth` that appear in none of the delegate's
     shell commands and not in its `files_read`, so it may not have read them. The turn's entry in `meta.json` has
@@ -54,8 +58,10 @@ Every field is always present; fields that don't apply yet are `null`.
   - `redacted: …`: text that looks like a secret (private keys, JWTs, API keys and tokens, `password=`-style
     values) was replaced with `[REDACTED:<kind>]` in the answer, the error and the run's event, stderr and answer
     files (`harness/redact.py`).
-  - `instructions in workdir: …`: Codex loads `AGENTS.md` (or `AGENTS.override.md`) from `workdir` up to its git
-    root as instructions ranked above the reviewed files. `meta.json` lists them under `agents_files`.
+  - `instructions in workdir: …`: the provider loads instruction files as ranked above the files it reads. Codex
+    loads `AGENTS.md` and `AGENTS.override.md` from `workdir` up to its git root; Claude loads `CLAUDE.md` and
+    `CLAUDE.local.md` from `workdir` up to the filesystem root (the home folder's own are skipped). `meta.json`
+    lists them under `instruction_files` (`agents_files` in runs before 2026-10-28).
 - `label`: `{outcome, mast, note, labelled}` once the run is labelled.
 
 ## Operations

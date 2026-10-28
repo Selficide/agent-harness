@@ -9,6 +9,9 @@ class Adapter:
     name = None
     schema_enforcement = "native"   # or "validated": prompt plus check plus one retry
     prompt_version = None
+    types = ("review", "research")   # request types this provider takes
+    instruction_files = ()           # files the provider loads as instructions from workdir upwards
+    instructions_up_to_git_root = True
 
     def defaults(self, cfg):
         """{"model": ..., "effort": {type: effort}} for requests that don't say."""
@@ -31,6 +34,10 @@ class Adapter:
         """Read turn N's output files: {thread_id, usage, answer_text, errors, commands} (commands: the shell
         commands the provider ran, as text, for the coverage check)."""
         raise NotImplementedError
+
+    def env(self, base):
+        """The environment for the provider's process, from the worker's own."""
+        return base
 
     def quota_snapshot(self, thread_id=None):
         """A quota snapshot (see quota.py): the run's own latest one when thread_id is given, else the newest

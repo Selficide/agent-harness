@@ -40,7 +40,35 @@ request templates and evals.*
   (`20261028-002547`), it refused, then used its blocked question to ask the requester for the file's contents.
 - Fixed in passing: coverage matching missed paths in commands that Codex records with doubled backslashes.
 
+## Done (2026-10-28): claude provider for cheap research
+- **`harness/adapters/claude.py`**: `claude -p --output-format stream-json` with `--restricted` (no command-running
+  tools or WebFetch, settings files ignored, file tools confined to the working folders), `--tools Read,Grep,Glob`,
+  `--strict-mcp-config`, `--json-schema` for the answer, `--max-budget-usd`, and `--resume` for replies. Research
+  only; `core` refuses a review for it. Folders of absolute request paths are added with `--add-dir`.
+- The child process gets the environment without the parent Claude Code session's variables (`CLAUDECODE`,
+  `CLAUDE_CODE_*` except `CLAUDE_CODE_OAUTH_TOKEN`), which mark it as a child session.
+- `claude.exe` is found from `claude_exe` in config, then PATH, then the desktop app's bundled copy.
+- Tool calls become command lines (`Read <path>`), so coverage and the outside-workdir tripwire work unchanged.
+  `paths.agents_files` became `instruction_files`, per provider (CLAUDE.md from workdir to the filesystem root).
+- Live checks: `20261028-015833` answered correctly for $0.003. In `20261028-015902`, `--restricted` refused a read of
+  `../outside.txt` (one permission denial) and the outside-workdir warning fired; a reply resumed the same session.
+- **Haiku vs Codex `low`**, three research questions about this repo with known answers (`20261028-0200*`): all six
+  answers were complete and correct. Haiku cost $0.004–0.012 per run and was slower on the biggest question (43 s vs
+  24 s), used fewer tokens (24–99k vs 78–217k), and added observations Codex didn't: a real shallow-merge bug in
+  `store.config` (fixed) and drift in the `store.py` docstring (fixed). One slip: its summary said 9 config keys and
+  listed 8.
+- Fixed from those runs: `StructuredOutput` (the answer itself) was counted as a command and tripped the outside
+  warning; a reply turn repeated warnings in the result.
+- Cheap Codex needed nothing new: `gpt-6-luna` is already Codex's "fast and affordable" model; `effort: low` is
+  the cheaper setting.
+
 ## Todos
+**Cheap research**
+- [ ] A harder comparison: questions where a cheap model is likely to miss things (cross-file flows, a large
+  folder), to find where Haiku stops being good enough.
+- [ ] Decide whether CLAUDE.md files (and auto-memory) should load for claude runs; `--bare` skips them but then
+  needs an API key.
+
 **Templates**
 - [ ] `hypothesis` template: independent root-cause analysis from a symptom file plus files to read, without
   the caller's theory.

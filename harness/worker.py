@@ -85,7 +85,7 @@ def execute(rdir, turn):
     entry["started"] = store.now_iso()
     run = dict(meta, run_dir=str(rdir))
     stdin_text = (rdir / files["input"]).read_text(encoding="utf-8")
-    env = dict(os.environ, AGENT_HARNESS_DEPTH="1")
+    env = adapter.env(dict(os.environ, AGENT_HARNESS_DEPTH="1"))
 
     timed_out, exit_code, launch_error = False, None, None
     start = time.monotonic()
@@ -116,6 +116,8 @@ def execute(rdir, turn):
         meta["thread_id"] = parsed["thread_id"]
     entry["usage"] = parsed["usage"]
     entry["errors"] = parsed["errors"]
+    if parsed.get("cost_usd") is not None:
+        entry["cost_usd"] = parsed["cost_usd"]
 
     answer, answer_problem = None, None
     if parsed["answer_text"] is not None:
@@ -184,10 +186,12 @@ def build_result(rdir, meta, state, answer, error):
     running = state == "running"
     finished = None if running else (turns[-1].get("finished") or store.now_iso())
     seconds = None if running else round(sum(t.get("seconds") or 0 for t in turns), 1)
-    warnings = [w for t in turns for w in t.get("warnings", [])]
-    if meta.get("agents_files"):
-        warnings.append(f"instructions in workdir: Codex loads {', '.join(meta['agents_files'])} as instructions "
-                        "ranked above the files it reviews; if the folder isn't yours, that file can steer the review")
+    warnings = list(dict.fromkeys(w for t in turns for w in t.get("warnings", [])))  # a reply turn repeats some
+    loaded = meta.get("instruction_files") or meta.get("agents_files")  # agents_files: runs before 2026-10-28
+    if loaded:
+        warnings.append(f"instructions in workdir: {meta['provider'].capitalize()} loads {', '.join(loaded)} as "
+                        "instructions ranked above the files it reads; if the folder isn't yours, that file can "
+                        "steer the run")
     if meta.get("breakaway") is False:
         warnings.append("the worker could not leave the caller's job object; the run may stop if the session ends")
     return {

@@ -1,7 +1,7 @@
 # agent-harness
 
-A small harness that lets Claude Code hand review and research tasks to a model from another family, OpenAI's Codex
-CLI today, and get back a typed, recorded, labelled result. It exposes one versioned contract through a CLI and an
+A small harness that lets Claude Code hand review and research tasks to a model from another family (OpenAI's Codex
+CLI), or research to a cheaper Claude model (Haiku, through `claude -p`), and get back a typed, recorded, labelled result. It exposes one versioned contract through a CLI and an
 MCP server.
 
 ## Why
@@ -30,6 +30,7 @@ Claude ──(MCP tool or CLI)──▶ core ──▶ store: ~/.agent-harness/r
 - `harness/worker.py`: a detached process that runs the provider, so a run survives the caller's tool call timing
   out. It parses the answer and writes the result.
 - `harness/adapters/`: `codex.py` builds the `codex exec` command, parses its event stream and reads plan usage.
+  `claude.py` runs `claude -p` with only Read, Grep and Glob, confined to the workdir (`--restricted`), for research.
   `fake.py` is a scripted provider for tests.
 - `harness/quota.py`: warns the first time a plan window crosses 25%, 50% and 75%, and refuses new runs at 98%.
 - `harness/paths.py`: checks that the files a request names exist, expands wildcard patterns, and after the run

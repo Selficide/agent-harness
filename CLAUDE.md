@@ -18,6 +18,9 @@ specific notes (local paths, background reading) go in `CLAUDE.local.md`, which 
 - **Review requests carry no author context:** no reasoning, drafts, or explanation of why the work is right. Only the
   artifact (`inputs`), the source of truth, and the criteria. The harness words the prompt (`harness/prompts/`); if
   that wording changes, bump `PROMPT_VERSION` so runs stay comparable.
+- **Pick the provider by task.** Reviews go to Codex (the default); a different model family is the point.
+  Research that a cheap model can do (sweeps, extraction, "where is X") can go to `"provider": "claude"` (Haiku by
+  default), or to Codex at `"effort": "low"`. The claude provider refuses reviews.
 - **Prefer a template when one fits** (`templates` lists them). It fixes the criteria wording, so runs stay
   comparable and no hints leak in. `diff-review` reviews uncommitted changes before a commit.
 - **Don't ask the delegate for a plan or progress updates.** OpenAI's guide says this can make Codex stop early.
@@ -38,8 +41,8 @@ python -m harness doctor
 ```
 - Run from this repo with Python 3.14. On Windows `python` may resolve to the Microsoft Store alias; on macOS it's
   `python3.14`. Use the interpreter in `CLAUDE.local.md`.
-- Defaults: model `gpt-6-luna`; effort `high` for review, `medium` for research; read-only sandbox; 15-minute
-  timeout; Codex's own sub-agents disabled. Change defaults in `~/.agent-harness/config.json`.
+- Defaults: model `gpt-6-luna` (Codex) or `claude-haiku-5-5` (claude); effort `high` for review, `medium` for research; read-only sandbox; 15-minute
+  timeout; Codex's own sub-agents disabled; claude runs capped at $1 (`claude_max_budget_usd`). Change defaults in `~/.agent-harness/config.json`.
 - Runs live in `~/.agent-harness/runs/<run_id>/`: `request.json`, `prompt.md`, the event stream, `result.json`,
   `meta.json`, `label.json`. v0 runs (from the retired `codex_delegate.py`) are there too and read as v1 results.
 - **Label every run** after acting on it. Labels are the eval data for comparing models, efforts, and prompts.

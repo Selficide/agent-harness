@@ -61,8 +61,11 @@ def delegate(request, wait=True, progress=None, provider=None, template_info=Non
 
     # AGENT_HARNESS_TEST_PROVIDER lets protocol tests reach the fake provider through the MCP server.
     adapter = adapters.get(provider or os.environ.get("AGENT_HARNESS_TEST_PROVIDER") or request.get("provider", "codex"))
+    if request["type"] not in adapter.types:
+        raise HarnessError("invalid_request", f"provider {adapter.name} takes {' and '.join(adapter.types)} requests "
+                                              f"only, not {request['type']}")
     try:
-        if adapter.name == "codex":
+        if hasattr(adapter, "exe"):
             adapter.exe()
     except ProviderUnavailable as e:
         raise HarnessError("provider_unavailable", str(e))
@@ -88,7 +91,9 @@ def delegate(request, wait=True, progress=None, provider=None, template_info=Non
             "request_key": request.get("request_key"),
             "request_template": template_info,
             "patterns": patterns or None,
-            "agents_files": paths.agents_files(request["workdir"]) if adapter.name == "codex" else [],
+            "instruction_files": paths.instruction_files(request["workdir"], adapter.instruction_files,
+                                                         adapter.instructions_up_to_git_root)
+                                 if adapter.instruction_files else [],
             "prompt_version": adapter.prompt_version,
             "schema_enforcement": adapter.schema_enforcement,
             "capabilities": adapter.capabilities(),
@@ -330,6 +335,7 @@ def doctor():
                    "AGENT_HARNESS_DEPTH is " + ("set" if os.environ.get("AGENT_HARNESS_DEPTH") else "unset")))
     checks.append(_breakaway_check())
     checks += adapters.get("codex").doctor()
+    checks += adapters.get("claude").doctor()
     problems = schema.check_contract()
     checks.append(("contract files valid", not problems, "; ".join(problems) or str(schema.CONTRACT_DIR)))
     # ok is True, False, or "warn" (works, with a weaker guarantee); only False fails the doctor.

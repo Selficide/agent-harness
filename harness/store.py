@@ -4,7 +4,8 @@ Layout (home is ~/.agent-harness, or $AGENT_HARNESS_HOME):
   config.json              thresholds and defaults (optional)
   quota-state.json         which quota thresholds have been announced, per provider and window
   runs/<run_id>/           request.json, prompt.md, events[-N].jsonl, stderr[-N].log, result[-N].md,
-                           result.json and meta.json (worker-owned), label.json (label-owned), reply-N.md, lock
+                           result.json and meta.json (worker-owned), label.json (label-owned), reply-N.md, lock,
+                           worker.log, answer.schema.json (Codex)
 """
 
 import ctypes
@@ -18,9 +19,10 @@ from pathlib import Path
 DEFAULT_CONFIG = {
     "quota_notify_percent": [25, 50, 75],
     "quota_refuse_percent": 98,
-    "default_model": {"codex": "gpt-6-luna"},
+    "default_model": {"codex": "gpt-6-luna", "claude": "claude-haiku-5-5"},
     "default_effort": {"review": "high", "research": "medium"},
     "default_timeout_s": 900,
+    "claude_max_budget_usd": 1.0,
     "inline_result_chars": 32000,
 }
 
@@ -34,11 +36,16 @@ def runs_dir():
 
 
 def config():
-    """DEFAULT_CONFIG overlaid with config.json, if present."""
-    cfg = dict(DEFAULT_CONFIG)
+    """DEFAULT_CONFIG overlaid with config.json, if present. Dict values (default_model, default_effort) merge key by
+    key, so {"default_model": {"codex": "x"}} keeps the claude default."""
+    cfg = {k: dict(v) if isinstance(v, dict) else v for k, v in DEFAULT_CONFIG.items()}
     user = read_json(home() / "config.json")
     if isinstance(user, dict):
-        cfg.update(user)
+        for k, v in user.items():
+            if isinstance(v, dict) and isinstance(cfg.get(k), dict):
+                cfg[k].update(v)
+            else:
+                cfg[k] = v
     return cfg
 
 

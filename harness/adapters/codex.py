@@ -19,6 +19,7 @@ class CodexAdapter(Adapter):
     name = "codex"
     schema_enforcement = "native"
     prompt_version = prompts.PROMPT_VERSION
+    instruction_files = ("AGENTS.md", "AGENTS.override.md")
 
     def exe(self):
         exe = shutil.which("codex")

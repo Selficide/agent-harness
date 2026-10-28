@@ -69,10 +69,10 @@ class AgentsFiles(unittest.TestCase):
             (root / "repo" / ".git").mkdir()
             for f in (root / "AGENTS.md", root / "repo" / "AGENTS.md", sub / "AGENTS.override.md"):
                 f.write_text("x", encoding="utf-8")
-            self.assertEqual(paths.agents_files(sub), [str(sub / "AGENTS.override.md"),
+            self.assertEqual(paths.instruction_files(sub), [str(sub / "AGENTS.override.md"),
                                                        str(root / "repo" / "AGENTS.md")])
             (root / "repo" / ".git").rmdir()
-            self.assertEqual(paths.agents_files(sub), [str(sub / "AGENTS.override.md")])
+            self.assertEqual(paths.instruction_files(sub), [str(sub / "AGENTS.override.md")])
 
 
 class Redact(unittest.TestCase):
@@ -132,6 +132,13 @@ class Worker(StoreCase):
         meta["agents_files"] = ["/x/AGENTS.md"]
         built = worker.build_result(Path(res["run_dir"]), meta, "done", None, None)
         self.assertTrue(any("/x/AGENTS.md" in w for w in built["warnings"]))
+
+    def test_warnings_repeated_by_a_reply_turn_appear_once(self):
+        res = self.run_fake("done")
+        meta = store.read_json(Path(res["run_dir"]) / "meta.json")
+        meta["turns"] = [{"turn": 1, "warnings": ["outside workdir: x"]}, {"turn": 2, "warnings": ["outside workdir: x"]}]
+        built = worker.build_result(Path(res["run_dir"]), meta, "done", None, None)
+        self.assertEqual(built["warnings"].count("outside workdir: x"), 1)
 
 
 class _NoRun:

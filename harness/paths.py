@@ -150,15 +150,17 @@ def outside_warning(found):
             "trusting the result")
 
 
-def agents_files(workdir):
-    """AGENTS.md-style files Codex loads as instructions for a run in workdir: in workdir and each folder above it
-    up to the git root (or only workdir, outside git)."""
+def instruction_files(workdir, names=("AGENTS.md", "AGENTS.override.md"), up_to_git_root=True):
+    """Instruction files (AGENTS.md, CLAUDE.md) a provider loads for a run in workdir: in workdir and each folder
+    above it, up to the git root (Codex: only workdir outside git) or to the filesystem root (Claude Code). Files in
+    the home folder itself are the user's own and aren't listed."""
     folder = Path(workdir).resolve()
-    chain = [folder]
-    top = next((p for p in [folder, *folder.parents] if (p / ".git").exists()), None)
-    if top:
-        chain = [p for p in [folder, *folder.parents] if p == top or top in p.parents]
-    return [str(p / name) for p in chain for name in ("AGENTS.md", "AGENTS.override.md") if (p / name).is_file()]
+    chain = [folder, *folder.parents]
+    if up_to_git_root:
+        top = next((p for p in chain if (p / ".git").exists()), None)
+        chain = [p for p in chain if p == top or top in p.parents] if top else [folder]
+    chain = [p for p in chain if p != Path.home().resolve()]
+    return [str(p / name) for p in chain for name in names if (p / name).is_file()]
 
 
 def coverage_warning(unreached, total):

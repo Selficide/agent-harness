@@ -7,6 +7,9 @@ def get(name):
     if name == "codex":
         from .codex import CodexAdapter
         return CodexAdapter()
+    if name == "claude":
+        from .claude import ClaudeAdapter
+        return ClaudeAdapter()
     if name == "fake":
         from .fake import FakeAdapter
         return FakeAdapter()
