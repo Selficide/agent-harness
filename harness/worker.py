@@ -13,7 +13,7 @@ import time
 import traceback
 from pathlib import Path
 
-from . import adapters, paths, quota, schema, store
+from . import adapters, paths, quota, redact, schema, store
 from .adapters.base import ProviderUnavailable, run_files
 
 DETACHED_PROCESS = 0x00000008
@@ -130,12 +130,27 @@ def execute(rdir, turn):
             answer_problem = "answer is not JSON"
     entry["answer_file"] = files["answer"] if parsed["answer_text"] is not None else None
 
+    # Tripwires against a delegate steered by what it read: paths outside workdir, and secrets in what it wrote.
+    commands = [c for t in range(1, turn) for c in adapter.parse(rdir, t).get("commands", [])] + parsed.get("commands", [])
+    outside = paths.outside_paths(request, commands, allowed=[store.home() / "captures"])
+    entry["outside_paths"] = outside
+    redacted = {}
+    for counts in [redact.file(rdir / files[k]) for k in ("events", "stderr", "answer")]:
+        for k, n in counts.items():
+            redacted[k] = redacted.get(k, 0) + n
+    if answer is not None:
+        answer, counts = redact.value(answer)
+        for k, n in counts.items():
+            redacted[k] = redacted.get(k, 0) + n
+    parsed["errors"] = entry["errors"] = redact.value(parsed["errors"])[0]
+
     after = adapter.quota_snapshot(meta.get("thread_id"))
     entry["quota_after"] = after
     warnings = list(entry.get("warnings", []))
     warnings += quota.announce(after)
     if parsed.get("commands_blocked"):
         warnings.append(f"{parsed['commands_blocked']} command(s) were blocked by the provider's sandbox policy")
+    warnings += [w for w in (paths.outside_warning(outside), redact.warning(redacted)) if w]
 
     if launch_error:
         state, error = "failed", {"kind": "provider_unavailable", "message": launch_error}
@@ -150,7 +165,6 @@ def execute(rdir, turn):
         state, error = answer["status"], None
         if not answer["files_read"]:
             warnings.append("files_read is empty: the delegate may not have read anything; check its evidence")
-        commands = [c for t in range(1, turn + 1) for c in adapter.parse(rdir, t).get("commands", [])]
         coverage = paths.coverage(request, commands, answer["files_read"])
         entry["coverage"] = {"unreached": coverage[0], "total": coverage[1]}
         warnings += [w for w in (paths.coverage_warning(*coverage), garbled_warning(answer)) if w]
@@ -171,6 +185,9 @@ def build_result(rdir, meta, state, answer, error):
     finished = None if running else (turns[-1].get("finished") or store.now_iso())
     seconds = None if running else round(sum(t.get("seconds") or 0 for t in turns), 1)
     warnings = [w for t in turns for w in t.get("warnings", [])]
+    if meta.get("agents_files"):
+        warnings.append(f"instructions in workdir: Codex loads {', '.join(meta['agents_files'])} as instructions "
+                        "ranked above the files it reviews; if the folder isn't yours, that file can steer the review")
     if meta.get("breakaway") is False:
         warnings.append("the worker could not leave the caller's job object; the run may stop if the session ends")
     return {

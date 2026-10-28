@@ -46,6 +46,16 @@ Every field is always present; fields that don't apply yet are `null`.
     the full list under `coverage`.
   - `findings … quote garbled text or claim an encoding fault`: the delegate may have read UTF-8 as another
     encoding. Check those findings against the file before acting.
+
+  Three are tripwires for a delegate steered by what it read (prompt injection):
+  - `outside workdir: …`: its commands named existing paths outside `workdir` that the request didn't name
+    (absolute paths, `~` and other home references, `../`). The sandbox limits writes, not reads. The turn's
+    entry in `meta.json` lists them under `outside_paths`.
+  - `redacted: …`: text that looks like a secret (private keys, JWTs, API keys and tokens, `password=`-style
+    values) was replaced with `[REDACTED:<kind>]` in the answer, the error and the run's event, stderr and answer
+    files (`harness/redact.py`).
+  - `instructions in workdir: …`: Codex loads `AGENTS.md` (or `AGENTS.override.md`) from `workdir` up to its git
+    root as instructions ranked above the reviewed files. `meta.json` lists them under `agents_files`.
 - `label`: `{outcome, mast, note, labelled}` once the run is labelled.
 
 ## Operations

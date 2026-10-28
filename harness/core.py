@@ -88,6 +88,7 @@ def delegate(request, wait=True, progress=None, provider=None, template_info=Non
             "request_key": request.get("request_key"),
             "request_template": template_info,
             "patterns": patterns or None,
+            "agents_files": paths.agents_files(request["workdir"]) if adapter.name == "codex" else [],
             "prompt_version": adapter.prompt_version,
             "schema_enforcement": adapter.schema_enforcement,
             "capabilities": adapter.capabilities(),
